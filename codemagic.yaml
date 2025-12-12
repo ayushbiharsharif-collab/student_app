@@ -12,17 +12,9 @@ workflows:
       - name: Install dependencies
         script: flutter pub get
 
-      - name: Set up certificate
+      - name: Fetch signing files
         script: |
-          keychain initialize
-          keychain add-certificates \
-            --certificate "$CERTIFICATE_PRIVATE_KEY" \
-            --certificate-password "$CERTIFICATE_PASSWORD"
-
-      - name: Fetch signing files from App Store Connect
-        script: |
-          app-store-connect fetch-signing-files \
-            "com.techinnovationapp.edusathi" \
+          app-store-connect fetch-signing-files "com.techinnovationapp.edusathi" \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
             --private-key "$APP_STORE_CONNECT_PRIVATE_KEY" \
@@ -35,3 +27,15 @@ workflows:
 
       - name: Build iOS IPA
         script: flutter build ipa --release
+
+      - name: Build Android APK
+        script: flutter build apk --release
+
+    artifacts:
+      - build/app/outputs/**/*.apk
+      - build/ios/ipa/*.ipa
+
+    publishing:
+      email:
+        recipients:
+          - "ayushbiharsharif@gmail.com"
