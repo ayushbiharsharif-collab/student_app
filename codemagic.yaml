@@ -17,7 +17,10 @@ workflows:
       - name: Set up keychain and certificates
         script: |
           keychain initialize
-         
+          keychain add-certificates \
+          --certificate "$CERTIFICATE_PRIVATE_KEY" \
+          --certificate-password "$CERTIFICATE_PASSWORD"
+
 
       - name: Fetch signing files from App Store Connect
         script: |
