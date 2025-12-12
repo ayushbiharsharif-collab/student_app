@@ -2,6 +2,7 @@ workflows:
   flutter-ios-android:
     name: Flutter iOS & Android Build
     max_build_duration: 60
+
     environment:
       groups:
         - ios_credentials
@@ -15,15 +16,14 @@ workflows:
         script: flutter pub get
 
       - name: Fetch signing files from App Store Connect
-  script: |
-    app-store-connect fetch-signing-files \
-      --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
-      --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
-      --private-key "$APP_STORE_CONNECT_PRIVATE_KEY" \
-      --platform IOS \
-      --type IOS_APP_STORE \
-      --create
-
+        script: |
+          app-store-connect fetch-signing-files \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --private-key "$APP_STORE_CONNECT_PRIVATE_KEY" \
+            --platform IOS \
+            --type IOS_APP_STORE \
+            --create
 
       - name: Apply signing to Xcode project
         script: |
