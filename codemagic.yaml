@@ -12,13 +12,12 @@ workflows:
       - name: Install dependencies
         script: flutter pub get
 
-      # Load your .p12 certificate from environment variable
       - name: Set up certificate
         script: |
+          echo "$CERTIFICATE_PRIVATE_KEY" | base64 --decode > certificate.p12
           keychain initialize
-          keychain add-certificates
+          keychain add-certificates --certificate certificate.p12 --certificate-password "$CERTIFICATE_PASSWORD"
 
-      # Download profiles & certificates from App Store Connect API
       - name: Fetch signing files
         script: |
           app-store-connect fetch-signing-files "com.techinnovationapp.edusathi" \
