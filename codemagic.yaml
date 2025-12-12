@@ -1,0 +1,51 @@
+workflows:
+  flutter-ios-android:
+    name: Flutter iOS & Android Build
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      groups:
+        - ios_credentials  # you will add this group in Codemagic
+      vars:
+        APP_NAME: "EduSathi"
+
+    scripts:
+      - name: Install dependencies
+        script: flutter pub get
+
+      ### 🔥 iOS Signing Setup (REQUIRED)
+      - name: Set up keychain and certificates
+        script: |
+          keychain initialize
+          keychain add-certificates  # loads certificates from your environment group
+
+      - name: Fetch signing files from App Store Connect
+        script: |
+          app-store-connect fetch-signing-files \
+            "$(xcode-project detect-bundle-id)" \
+            --platform IOS \
+            --type IOS_APP_STORE \
+            --create
+
+      - name: Apply signing to Xcode project
+        script: |
+          xcode-project use-profiles
+
+      ### 🔥 Build iOS IPA
+      - name: Build iOS
+        script: |
+          flutter build ipa --release
+
+      ### Android Build
+      - name: Build Android APK
+        script: flutter build apk --release
+
+    artifacts:
+      - build/app/outputs/**/*.apk
+      - build/ios/ipa/*.ipa
+
+    publishing:
+      email:
+        recipients:
+          - "ayushbiharsharif@gmail.com"
