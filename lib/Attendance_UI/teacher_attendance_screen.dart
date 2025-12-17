@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:student_app/auth_helper.dart';
 
 class TeacherAttendanceScreen extends StatefulWidget {
   const TeacherAttendanceScreen({super.key});
@@ -14,7 +13,7 @@ class TeacherAttendanceScreen extends StatefulWidget {
 
 class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
   DateTime _focusedMonth = DateTime.now();
-  Map<String, String> _attendanceMap = {}; // 'yyyy-MM-dd': status
+  Map<String, String> _attendanceMap = {}; // yyyy-MM-dd : status
   bool _isLoading = false;
 
   @override
@@ -23,29 +22,55 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     _fetchAttendance();
   }
 
+  // ====================================================
+  // 🔐 SAFE FETCH ATTENDANCE (iOS + Android)
+  // ====================================================
   Future<void> _fetchAttendance() async {
+    if (!mounted) return;
+
     setState(() => _isLoading = true);
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
 
-    final formattedMonth = DateFormat('yyyy-MM').format(_focusedMonth);
-    final url = Uri.parse('https://school.edusathi.in/api/teacher/attendance');
+    try {
+      final formattedMonth = DateFormat('yyyy-MM').format(_focusedMonth);
 
-    final response = await http.post(
-      url,
-      headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
-      body: {'Month': formattedMonth},
-    );
+      final res = await AuthHelper.post(
+        context,
+        'https://school.edusathi.in/api/teacher/attendance',
+        body: {'Month': formattedMonth},
+      );
 
-    if (response.statusCode == 200) {
-      final List data = json.decode(response.body);
-      setState(() {
-        _attendanceMap = {for (var item in data) item['date']: item['status']};
-        _isLoading = false;
-      });
-    } else {
+      // AuthHelper already handles 401 + logout
+      if (res == null) return;
+
+      debugPrint("📥 TEACHER ATTENDANCE STATUS: ${res.statusCode}");
+      debugPrint("📥 TEACHER ATTENDANCE BODY: ${res.body}");
+
+      if (res.statusCode == 200) {
+        final List data = jsonDecode(res.body);
+
+        if (!mounted) return;
+        setState(() {
+          _attendanceMap = {
+            for (final item in data)
+              item['date'].toString(): item['status'].toString(),
+          };
+        });
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to load attendance")),
+        );
+      }
+    } catch (e) {
+      debugPrint("🚨 TEACHER ATTENDANCE ERROR: $e");
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Something went wrong")),
+      );
+    } finally {
+      if (!mounted) return;
       setState(() => _isLoading = false);
-      print('❌ Failed to load teacher attendance');
     }
   }
 
@@ -80,7 +105,9 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
               child: Container(
                 color: Colors.black.withOpacity(0.1),
                 child: const Center(
-                  child: CircularProgressIndicator(color: Colors.deepPurple),
+                  child: CircularProgressIndicator(
+                    color: Colors.deepPurple,
+                  ),
                 ),
               ),
             ),
@@ -89,6 +116,9 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
     );
   }
 
+  // ====================================================
+  // 📅 CALENDAR UI (UNCHANGED)
+  // ====================================================
   Widget _buildCalendarContainer(
     int year,
     int month,
@@ -126,8 +156,8 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                         _focusedMonth.year,
                         _focusedMonth.month - 1,
                       );
-                      _fetchAttendance();
                     });
+                    _fetchAttendance();
                   },
                 ),
                 Text(
@@ -146,8 +176,8 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
                         _focusedMonth.year,
                         _focusedMonth.month + 1,
                       );
-                      _fetchAttendance();
                     });
+                    _fetchAttendance();
                   },
                 ),
               ],
