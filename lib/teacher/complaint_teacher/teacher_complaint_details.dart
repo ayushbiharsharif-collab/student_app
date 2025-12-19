@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:student_app/auth_helper.dart';
 
 class TeacherComplaintDetailPage extends StatefulWidget {
   final int complaintId;
@@ -40,52 +39,52 @@ class _TeacherComplaintDetailPageState
   }
 
   // ---------------- FETCH HISTORY ----------------
-  Future<void> fetchComplaintHistory() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+ Future<void> fetchComplaintHistory() async {
+  debugPrint("🟡 fetchComplaintHistory START");
+  debugPrint("🆔 ComplaintId: ${widget.complaintId}");
 
-      if (token == null || token.isEmpty) {
-        if (!mounted) return;
-        setState(() {
-          history = [];
-          isLoading = false;
-        });
-        return;
-      }
+  try {
+    final response = await AuthHelper.post(
+      context,
+      'https://school.edusathi.in/api/teacher/complaint/history',
+      body: {
+        'ComplaintId': widget.complaintId.toString(),
+      },
+    );
 
-      final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'ComplaintId': widget.complaintId}),
-      );
+    // token expired → AuthHelper logout kara dega
+    if (response == null || !mounted) return;
 
-      if (!mounted) return;
+    debugPrint("🟢 STATUS CODE: ${response.statusCode}");
+    debugPrint("📦 RAW BODY: ${response.body}");
 
-      if (response.statusCode == 200 && response.body.isNotEmpty) {
-        final decoded = jsonDecode(response.body);
-        setState(() {
-          history = decoded is List ? decoded : [];
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          history = [];
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+
+      setState(() {
+        history = decoded is List ? decoded : [];
+        isLoading = false;
+      });
+
+      debugPrint("📊 HISTORY COUNT: ${history.length}");
+    } else {
       setState(() {
         history = [];
         isLoading = false;
       });
+      debugPrint("⚠️ Non-200 response");
     }
+  } catch (e) {
+    debugPrint("❌ fetchComplaintHistory ERROR: $e");
+    if (!mounted) return;
+    setState(() {
+      history = [];
+      isLoading = false;
+    });
   }
+
+  debugPrint("🔚 fetchComplaintHistory END");
+}
 
   // ---------------- HELPERS ----------------
   String getStatusText(int status) => status == 1 ? "Solved" : "Pending";

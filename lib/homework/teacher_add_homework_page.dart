@@ -57,14 +57,11 @@ class _TeacherAddHomeworkPageState extends State<TeacherAddHomeworkPage> {
   // ============================
   Future<void> fetchClasses() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final token = prefs.getString('auth_token') ?? '';
 
     final res = await http.post(
       Uri.parse('https://school.edusathi.in/api/get_class'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-      },
+      headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
 
     if (res.statusCode == 200 && mounted) {
@@ -79,7 +76,7 @@ class _TeacherAddHomeworkPageState extends State<TeacherAddHomeworkPage> {
   // ============================
   Future<void> fetchSections(int classId) async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final token = prefs.getString('auth_token') ?? '';
 
     final res = await http.post(
       Uri.parse('https://school.edusathi.in/api/get_section'),
@@ -104,7 +101,7 @@ class _TeacherAddHomeworkPageState extends State<TeacherAddHomeworkPage> {
   // ============================
   Future<void> fetchHomeworkDetails(int homeworkId) async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
+    final token = prefs.getString('auth_token') ?? '';
 
     final res = await http.post(
       Uri.parse('https://school.edusathi.in/api/teacher/homework/edit'),
@@ -148,9 +145,9 @@ class _TeacherAddHomeworkPageState extends State<TeacherAddHomeworkPage> {
         submissionDate == null ||
         _titleController.text.trim().isEmpty ||
         _descriptionController.text.trim().isEmpty) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(content: Text("Please fill all fields")),
-      );
+      ScaffoldMessenger.maybeOf(
+        context,
+      )?.showSnackBar(const SnackBar(content: Text("Please fill all fields")));
       return;
     }
 
@@ -159,7 +156,7 @@ class _TeacherAddHomeworkPageState extends State<TeacherAddHomeworkPage> {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token') ?? '';
+      final token = prefs.getString('auth_token') ?? '';
 
       final isEdit = widget.homeworkToEdit != null;
       final url = isEdit
@@ -172,22 +169,18 @@ class _TeacherAddHomeworkPageState extends State<TeacherAddHomeworkPage> {
         ..fields['Section'] = selectedSectionId.toString()
         ..fields['Title'] = _titleController.text.trim()
         ..fields['Description'] = _descriptionController.text.trim()
-        ..fields['AssignDate'] =
-            DateFormat('yyyy-MM-dd').format(assignDate!)
-        ..fields['SubmissionDate'] =
-            DateFormat('yyyy-MM-dd').format(submissionDate!);
+        ..fields['AssignDate'] = DateFormat('yyyy-MM-dd').format(assignDate!)
+        ..fields['SubmissionDate'] = DateFormat(
+          'yyyy-MM-dd',
+        ).format(submissionDate!);
 
       if (isEdit) {
-        request.fields['HomeworkId'] =
-            widget.homeworkToEdit!['id'].toString();
+        request.fields['HomeworkId'] = widget.homeworkToEdit!['id'].toString();
       }
 
       if (selectedFile != null) {
         request.files.add(
-          await http.MultipartFile.fromPath(
-            'Attachment',
-            selectedFile!.path,
-          ),
+          await http.MultipartFile.fromPath('Attachment', selectedFile!.path),
         );
       }
 
@@ -208,15 +201,16 @@ class _TeacherAddHomeworkPageState extends State<TeacherAddHomeworkPage> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.maybeOf(
+        context,
+      )?.showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       _isSubmitting = false;
       if (mounted) setState(() => isLoading = false);
     }
   }
- Future<void> pickFile() async {
+
+  Future<void> pickFile() async {
     final result = await FilePicker.platform.pickFiles();
     if (result != null && result.files.single.path != null) {
       setState(() {

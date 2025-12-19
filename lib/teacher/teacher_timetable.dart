@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:student_app/auth_helper.dart';
 
 class TeacherTimeTablePage extends StatefulWidget {
   const TeacherTimeTablePage({super.key});
@@ -32,48 +31,53 @@ class _TeacherTimeTablePageState extends State<TeacherTimeTablePage> {
     fetchTimeTableForDay(1); // Monday
   }
 
-  Future<void> fetchTimeTableForDay(int dayCode) async {
-    if (!mounted) return;
+ Future<void> fetchTimeTableForDay(int dayCode) async {
+  if (!mounted) return;
 
-    setState(() => isLoading = true);
+  setState(() => isLoading = true);
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+  debugPrint("🟡 fetchTimeTableForDay START | Day: $dayCode");
 
-      if (token == null || token.isEmpty) {
-        throw Exception("Token missing");
-      }
+  try {
+    final response = await AuthHelper.post(
+      context,
+      apiUrl,
+      body: {'Day': dayCode},
+    );
 
-      final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'Day': dayCode}),
-      );
-
-      if (!mounted) return;
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        setState(() {
-          periods = decoded is List ? decoded : [];
-        });
-      } else {
-        setState(() => periods = []);
-        _showSnack("Failed to load timetable");
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => periods = []);
-      _showSnack("Something went wrong");
-    } finally {
+    // 🔐 token expired → AuthHelper already logout kara dega
+    if (response == null || !mounted) {
       if (mounted) setState(() => isLoading = false);
+      return;
     }
+
+    debugPrint("🟢 STATUS CODE: ${response.statusCode}");
+    debugPrint("📦 RAW BODY: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+
+      setState(() {
+        periods = decoded is List ? decoded : [];
+      });
+
+      debugPrint("📊 PERIOD COUNT: ${periods.length}");
+    } else {
+      setState(() => periods = []);
+      _showSnack("Failed to load timetable (${response.statusCode})");
+    }
+  } catch (e) {
+    debugPrint("❌ fetchTimeTableForDay ERROR: $e");
+    if (!mounted) return;
+    setState(() => periods = []);
+    _showSnack("Something went wrong");
+  } finally {
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
+    debugPrint("🔚 fetchTimeTableForDay END");
   }
+}
 
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context)

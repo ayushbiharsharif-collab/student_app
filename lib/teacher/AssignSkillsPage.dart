@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:student_app/api_service.dart';
 
+import '../auth_helper.dart';
+
 class AssignSkillsPage extends StatefulWidget {
   const AssignSkillsPage({super.key});
 
@@ -13,11 +15,11 @@ class _AssignSkillsPageState extends State<AssignSkillsPage> {
   List<Map<String, dynamic>> studentList = [];
   List<Map<String, dynamic>> filteredList = [];
   List<Map<String, dynamic>> skills = [];
-  List<Map<String, dynamic>> examList = [];
+  // List<Map<String, dynamic>> examList = [];
 
   String? selectedExam;
   String? selectedSkill;
-
+  List exams = [];
   bool isSubmitting = false;
   bool showTable = false;
   bool isLoading = false;
@@ -44,15 +46,25 @@ class _AssignSkillsPageState extends State<AssignSkillsPage> {
   // ---------------- EXAMS ----------------
   Future<void> fetchExams() async {
     try {
-      final response = await ApiService.post('/get_exam', body: {});
-      if (response.statusCode == 200 && mounted) {
-        examList = List<Map<String, dynamic>>.from(jsonDecode(response.body));
-        if (examList.isNotEmpty) {
-          selectedExam ??= examList.first['ExamId'].toString();
+      final response = await AuthHelper.post(
+        context,
+        "https://school.edusathi.in/api/get_exam",
+      );
+
+      if (response == null || !mounted) return;
+
+      debugPrint("🟢 EXAMS STATUS: ${response.statusCode}");
+      debugPrint("📦 EXAMS BODY: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is List) {
+          setState(() => exams = decoded);
         }
-        setState(() {});
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint("❌ fetchExams error: $e");
+    }
   }
 
   // ---------------- SKILLS ----------------
@@ -216,10 +228,9 @@ class _AssignSkillsPageState extends State<AssignSkillsPage> {
                             labelText: 'Select Exam',
                             border: OutlineInputBorder(),
                           ),
-                          items: examList.map((exam) {
-                            if (examList.isNotEmpty)
-                              selectedExam ??= examList.first['ExamId']
-                                  .toString();
+                          items: exams.map((exam) {
+                            if (exams.isNotEmpty)
+                              selectedExam ??= exams.first['ExamId'].toString();
                             return DropdownMenuItem(
                               value: exam['ExamId'].toString(),
                               child: Text(exam['Exam']),

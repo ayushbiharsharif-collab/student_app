@@ -82,7 +82,7 @@ class _LoginPageState extends State<LoginPage> {
         final prefs = await SharedPreferences.getInstance();
 
         // 🔐 SAVE SESSION FLAGS (REQUIRED FOR ANDROID)
-    
+
         await prefs.setString('user_type', data['user_type'] ?? '');
 
         // ✅ CRITICAL FIX (ANDROID NEEDS THIS)
@@ -106,11 +106,23 @@ class _LoginPageState extends State<LoginPage> {
           await prefs.setString('class_name', profile['class_name'] ?? '');
           await prefs.setString('section', profile['section'] ?? '');
           await prefs.setString('school_name', profile['school_name'] ?? '');
+          // 🟢 DEBUG PRINTS (STUDENT)
+          debugPrint("🧑 STUDENT NAME: ${prefs.getString('student_name')}");
+          debugPrint("🖼️ STUDENT PHOTO: ${prefs.getString('student_photo')}");
+          debugPrint("🏫 SCHOOL NAME: ${prefs.getString('school_name')}");
+          debugPrint("🏷️ CLASS: ${prefs.getString('class_name')}");
+          debugPrint("📘 SECTION: ${prefs.getString('section')}");
         } else {
           await prefs.setString('teacher_name', profile['name'] ?? '');
           await prefs.setString('school_name', profile['school'] ?? '');
+          await prefs.setString('teacher_photo', profile['photo'] ?? '');
+          await prefs.setString('teacher_class', profile['class'] ?? '');
+          await prefs.setString('teacher_section', profile['section'] ?? '');
         }
 
+        debugPrint(
+          "🔐 AUTH TOKEN (SECURE): ${await secureStorage.read(key: 'auth_token')}",
+        );
         debugPrint("💾 PROFILE SAVED");
         passwordController.clear();
 
@@ -118,13 +130,12 @@ class _LoginPageState extends State<LoginPage> {
 
         debugPrint("➡️ NAVIGATING TO DASHBOARD");
 
-       Navigator.pushAndRemoveUntil(
-  context,
-  MaterialPageRoute(builder: (_) => const SplashScreen()),
-  (route) => false,
-);
-return;
-
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const SplashScreen()),
+          (route) => false,
+        );
+        return;
       } else {
         debugPrint("❌ LOGIN FAILED: ${data['message']}");
         setState(() {

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:student_app/auth_helper.dart';
 
 class FeeDetailsPage extends StatefulWidget {
   const FeeDetailsPage({super.key});
@@ -52,67 +51,53 @@ class _FeeDetailsPageState extends State<FeeDetailsPage> {
     fetchFeeData(monthApiKeys[selectedMonthIndex]);
   }
 
- Future<void> fetchFeeData(String monthKey) async {
-  if (!mounted) return;
+  Future<void> fetchFeeData(String monthKey) async {
+    if (!mounted) return;
 
-  setState(() => isLoading = true);
+    setState(() => isLoading = true);
 
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    try {
+      final response = await AuthHelper.post(
+        context,
+        apiUrl,
+        body: {'Month': monthKey},
+      );
 
-    if (token == null || token.isEmpty) {
-      if (mounted) {
+      // Token expired → AuthHelper already logout kara dega
+      if (response == null) return;
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+
+        setState(() {
+          feeData = decoded is List ? decoded : [];
+          isLoading = false;
+        });
+      } else {
         setState(() {
           feeData = [];
           isLoading = false;
         });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to fetch fee details")),
+        );
       }
-      return;
-    }
+    } catch (e) {
+      if (!mounted) return;
 
-    final response = await http.post(
-      Uri.parse(apiUrl),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'Month': monthKey}),
-    );
-
-    if (!mounted) return;
-
-    if (response.statusCode == 200) {
-      final decoded = jsonDecode(response.body);
-
-      setState(() {
-        feeData = decoded is List ? decoded : [];
-        isLoading = false;
-      });
-    } else {
       setState(() {
         feeData = [];
         isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to fetch fee details")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Network error")));
     }
-  } catch (e) {
-    if (!mounted) return;
-
-    setState(() {
-      feeData = [];
-      isLoading = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Network error: $e")),
-    );
   }
-}
 
   @override
   Widget build(BuildContext context) {

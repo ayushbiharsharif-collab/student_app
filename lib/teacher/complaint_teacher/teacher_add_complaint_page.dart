@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:student_app/auth_helper.dart';
 
 class TeacherAddComplaintPage extends StatefulWidget {
   const TeacherAddComplaintPage({super.key});
@@ -34,102 +33,99 @@ class _TeacherAddComplaintPageState extends State<TeacherAddComplaintPage> {
   }
 
   // ---------------- FETCH STUDENTS ----------------
-  Future<void> fetchStudents() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+ Future<void> fetchStudents() async {
+  debugPrint("🟡 fetchStudents START");
 
-      if (token == null || token.isEmpty) {
-        if (!mounted) return;
-        setState(() {
-          students = [];
-          isLoadingStudents = false;
-        });
-        return;
-      }
+  try {
+    final response = await AuthHelper.post(
+      context,
+      'https://school.edusathi.in/api/get_student',
+    );
 
-      final response = await http.post(
-        Uri.parse('https://school.edusathi.in/api/get_student'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      );
+    // token expired → AuthHelper logout kara dega
+    if (response == null || !mounted) return;
 
-      if (!mounted) return;
+    debugPrint("🟢 STATUS CODE: ${response.statusCode}");
+    debugPrint("📦 RAW BODY: ${response.body}");
 
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        setState(() {
-          students = decoded is List ? decoded : [];
-          isLoadingStudents = false;
-        });
-      } else {
-        setState(() => isLoadingStudents = false);
-        _showSnackBar("Failed to load students");
-      }
-    } catch (e) {
-      if (!mounted) return;
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+
       setState(() {
-        students = [];
+        students = decoded is List ? decoded : [];
         isLoadingStudents = false;
       });
-      _showSnackBar("Error loading students");
+
+      debugPrint("📊 STUDENT COUNT: ${students.length}");
+    } else {
+      setState(() => isLoadingStudents = false);
+      _showSnackBar("Failed to load students");
     }
+  } catch (e) {
+    debugPrint("❌ fetchStudents ERROR: $e");
+    if (!mounted) return;
+    setState(() {
+      students = [];
+      isLoadingStudents = false;
+    });
+    _showSnackBar("Error loading students");
   }
 
-  // ---------------- SUBMIT COMPLAINT ----------------
-  Future<void> submitComplaint() async {
-    if (!_formKey.currentState!.validate()) return;
+  debugPrint("🔚 fetchStudents END");
+}
 
-    if (selectedStudentId == null) {
-      _showSnackBar("Please select a student");
+
+  // ---------------- SUBMIT COMPLAINT ----------------
+ Future<void> submitComplaint() async {
+  if (!_formKey.currentState!.validate()) return;
+
+  if (selectedStudentId == null) {
+    _showSnackBar("Please select a student");
+    return;
+  }
+
+  setState(() => isSubmitting = true);
+
+  debugPrint("🟡 submitComplaint START");
+
+  try {
+    final response = await AuthHelper.post(
+      context,
+      'https://school.edusathi.in/api/teacher/complaint/store',
+      body: {
+        'StudentId': selectedStudentId.toString(),
+        'Description': descriptionController.text.trim(),
+      },
+    );
+
+    if (response == null || !mounted) {
+      if (mounted) setState(() => isSubmitting = false);
       return;
     }
 
-    setState(() => isSubmitting = true);
+    debugPrint("🟢 STATUS CODE: ${response.statusCode}");
+    debugPrint("📦 RAW BODY: ${response.body}");
 
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+    final decoded = jsonDecode(response.body);
 
-      if (token == null || token.isEmpty) {
-        if (!mounted) return;
-        setState(() => isSubmitting = false);
-        _showSnackBar("Session expired. Please login again.");
-        return;
-      }
+    setState(() => isSubmitting = false);
 
-      final response = await http.post(
-        Uri.parse('https://school.edusathi.in/api/teacher/complaint/store'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-        body: {
-          'StudentId': selectedStudentId.toString(),
-          'Description': descriptionController.text.trim(),
-        },
-      );
-
-      if (!mounted) return;
-
-      final decoded = jsonDecode(response.body);
-
-      setState(() => isSubmitting = false);
-
-      if (response.statusCode == 200 && decoded['status'] == true) {
-        _showSnackBar(decoded['message'] ?? "Complaint submitted");
-        Navigator.pop(context, true);
-      } else {
-        _showSnackBar(decoded['message'] ?? "Submission failed");
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => isSubmitting = false);
-      _showSnackBar("Something went wrong");
+    if (response.statusCode == 200 && decoded['status'] == true) {
+      _showSnackBar(decoded['message'] ?? "Complaint submitted");
+      Navigator.pop(context, true);
+    } else {
+      _showSnackBar(decoded['message'] ?? "Submission failed");
     }
+  } catch (e) {
+    debugPrint("❌ submitComplaint ERROR: $e");
+    if (!mounted) return;
+    setState(() => isSubmitting = false);
+    _showSnackBar("Something went wrong");
   }
+
+  debugPrint("🔚 submitComplaint END");
+}
+
 
   void _showSnackBar(String msg) {
     if (!mounted) return;

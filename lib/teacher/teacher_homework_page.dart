@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:open_file/open_file.dart';
+import 'package:student_app/auth_helper.dart';
 import 'package:student_app/homework/teacher_add_homework_page.dart';
 import 'teacher_homework_detail_page.dart';
 
@@ -27,56 +27,54 @@ class _TeacherHomeworkPageState extends State<TeacherHomeworkPage> {
   }
 
   // ---------------- FETCH HOMEWORKS ----------------
-  Future<void> fetchHomeworks() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token') ?? '';
+ Future<void> fetchHomeworks() async {
+  setState(() => isLoading = true);
 
-      if (token.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Session expired. Please login again.")),
-          );
+  try {
+    final response = await AuthHelper.post(
+      context,
+      'https://school.edusathi.in/api/teacher/homework',
+    );
+
+    // 🔐 token expired → AuthHelper already logout kara dega
+    if (response == null || !mounted) {
+      if (mounted) setState(() => isLoading = false);
+      return;
+    }
+
+    debugPrint("🟢 HOMEWORK STATUS: ${response.statusCode}");
+    debugPrint("📦 HOMEWORK BODY: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+
+      setState(() {
+        if (decoded is List) {
+          homeworks = List<Map<String, dynamic>>.from(decoded);
+        } else {
+          homeworks = [];
         }
-        return;
-      }
-
-      final response = await http
-          .post(
-            Uri.parse('https://school.edusathi.in/api/teacher/homework'),
-            headers: {
-              'Authorization': 'Bearer $token',
-              'Accept': 'application/json',
-            },
-          )
-          .timeout(const Duration(seconds: 20));
-
-      if (!mounted) return;
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        setState(() {
-          homeworks = List<Map<String, dynamic>>.from(data);
-          isLoading = false;
-        });
-      } else {
-        setState(() => isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Failed to load homeworks (${response.statusCode})",
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
+        isLoading = false;
+      });
+    } else {
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+        SnackBar(
+          content: Text(
+            "Failed to load homeworks (${response.statusCode})",
+          ),
+        ),
       );
     }
+  } catch (e) {
+    debugPrint("❌ fetchHomeworks error: $e");
+    if (!mounted) return;
+    setState(() => isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Error loading homework")),
+    );
   }
+}
 
   // ---------------- DATE FORMAT ----------------
   String formatDate(String? date) {
@@ -118,9 +116,11 @@ class _TeacherHomeworkPageState extends State<TeacherHomeworkPage> {
       await OpenFile.open(file.path);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Download error")),
-        );
+        debugPrint("Download error: $e");
+
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(content: Text("❌ Download error")),
+        // );
       }
     }
   }

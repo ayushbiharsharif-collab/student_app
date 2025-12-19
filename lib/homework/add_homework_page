@@ -73,12 +73,14 @@ class _AddHomeworkPageState extends State<AddHomeworkPage> {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+      final token = prefs.getString('auth_token');
 
       if (token == null || token.isEmpty) {
-        _showSnack("Session expired. Please login again.");
-        return;
-      }
+  _showSnack("Session expired. Please login again.");
+  if (mounted) setState(() => isSubmitting = false);
+  return;
+}
+
 
       final request = http.MultipartRequest(
         'POST',

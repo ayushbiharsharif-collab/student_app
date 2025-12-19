@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:student_app/auth_helper.dart';
 
 class ResultCardPage extends StatefulWidget {
   const ResultCardPage({super.key});
@@ -36,22 +35,22 @@ class _ResultCardPageState extends State<ResultCardPage> {
 
   // ---------------- FETCH EXAMS ----------------
   Future<void> fetchExams() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
     try {
-      final res = await http.post(
-        Uri.parse("https://school.edusathi.in/api/get_exam"),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({}),
+      final response = await AuthHelper.post(
+        context,
+        "https://school.edusathi.in/api/get_exam",
       );
 
-      if (res.statusCode == 200 && mounted) {
-        exams = jsonDecode(res.body);
-        setState(() {});
+      if (response == null) return;
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is List) {
+          setState(() {
+            exams = decoded;
+          });
+        }
       }
     } catch (_) {}
   }
@@ -59,9 +58,9 @@ class _ResultCardPageState extends State<ResultCardPage> {
   // ---------------- FETCH RESULTS ----------------
   Future<void> fetchResults() async {
     if (selectedExamId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an exam')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select an exam')));
       return;
     }
 
@@ -70,30 +69,41 @@ class _ResultCardPageState extends State<ResultCardPage> {
       showSearchBar = false;
     });
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
     try {
-      final response = await http.post(
-        Uri.parse('https://school.edusathi.in/api/teacher/result'),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({"ExamId": selectedExamId}),
+      final response = await AuthHelper.post(
+        context,
+        'https://school.edusathi.in/api/teacher/result',
+        body: {'ExamId': selectedExamId},
       );
+
+      if (response == null) {
+        if (mounted) setState(() => isLoading = false);
+        return;
+      }
 
       if (!mounted) return;
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        studentResults = List.from(data);
-        filteredResults = List.from(data);
-        showSearchBar = true;
+
+        setState(() {
+          if (data is List) {
+            studentResults = data;
+            filteredResults = data;
+            showSearchBar = true;
+          } else {
+            studentResults = [];
+            filteredResults = [];
+            showSearchBar = false;
+          }
+        });
       }
     } catch (_) {
-      studentResults = [];
-      filteredResults = [];
+      if (!mounted) return;
+      setState(() {
+        studentResults = [];
+        filteredResults = [];
+      });
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -104,8 +114,11 @@ class _ResultCardPageState extends State<ResultCardPage> {
     if (text.isEmpty) return text;
     return text
         .split(' ')
-        .map((w) =>
-            w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}' : '')
+        .map(
+          (w) => w.isNotEmpty
+              ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}'
+              : '',
+        )
         .join(' ');
   }
 
@@ -198,8 +211,9 @@ class _ResultCardPageState extends State<ResultCardPage> {
                     final query = q.toLowerCase();
                     setState(() {
                       filteredResults = studentResults.where((s) {
-                        final name =
-                            (s['StudentName'] ?? '').toString().toLowerCase();
+                        final name = (s['StudentName'] ?? '')
+                            .toString()
+                            .toLowerCase();
                         final roll = (s['RollNo'] ?? '').toString();
                         return name.contains(query) || roll.contains(query);
                       }).toList();
@@ -213,93 +227,109 @@ class _ResultCardPageState extends State<ResultCardPage> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : filteredResults.isEmpty
-                      ? const Center(child: Text('No results found.'))
-                      : ListView.builder(
-                          itemCount: filteredResults.length,
-                          itemBuilder: (context, index) {
-                            final student = filteredResults[index];
-                            final marks = (student['Marks'] ?? []) as List;
+                  ? const Center(child: Text('No results found.'))
+                  : ListView.builder(
+                      itemCount: filteredResults.length,
+                      itemBuilder: (context, index) {
+                        final student = filteredResults[index];
 
-                            int totalMarks = 0;
-                            double obtainedMarks = 0;
+                        // 🔐 SAFE MARKS EXTRACTION
+                        final marks = student['Marks'] is List
+                            ? student['Marks'] as List
+                            : <dynamic>[];
 
-                            for (var m in marks) {
-                              totalMarks += _toInt(m['TotalMark']);
-                              if (m['IsPresent'] == 'Yes') {
-                                obtainedMarks += _toDouble(m['GetMark']);
-                              }
-                            }
+                        int totalMarks = 0;
+                        double obtainedMarks = 0;
 
-                            final percentage = totalMarks > 0
-                                ? (obtainedMarks / totalMarks) * 100
-                                : 0.0;
+                        for (var m in marks) {
+                          totalMarks += _toInt(m['TotalMark']);
+                          if (m['IsPresent'] == 'Yes') {
+                            obtainedMarks += _toDouble(m['GetMark']);
+                          }
+                        }
 
-                            return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 8),
-                              elevation: 2,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "R_No: ${student['RollNo']}  ||  ${student['StudentName']}",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      "F Name: ${_toTitleCase(student['FatherName'].toString())}",
-                                    ),
-                                    const Divider(),
-                                    ...marks.map(
-                                      (m) => Row(
-                                        children: [
-                                          Expanded(flex: 5, child: Text(m['Subject'])),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(
-                                              m['TotalMark'].toString(),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(
-                                              m['IsPresent'] == 'No'
-                                                  ? 'Ab'
-                                                  : m['GetMark'].toString(),
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                color: m['IsPresent'] == 'No'
-                                                    ? Colors.red
-                                                    : Colors.black,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const Divider(),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                        final percentage = totalMarks > 0
+                            ? (obtainedMarks / totalMarks) * 100
+                            : 0.0;
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "R_No: ${student['RollNo']}  ||  ${student['StudentName']}",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  "F Name: ${_toTitleCase(student['FatherName'].toString())}",
+                                ),
+                                const Divider(),
+                                if (marks.isEmpty) ...[
+                                  const Text(
+                                    "Marks not available",
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                ] else ...[
+                                  ...marks.map(
+                                    (m) => Row(
                                       children: [
-                                        Text("Total: $obtainedMarks / $totalMarks"),
-                                        Text(
-                                          "Percentage: ${percentage.toStringAsFixed(2)}%",
+                                        Expanded(
+                                          flex: 5,
+                                          child: Text(m['Subject']),
+                                        ),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            m['TotalMark'].toString(),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          flex: 2,
+                                          child: Text(
+                                            m['IsPresent'] == 'No'
+                                                ? 'Ab'
+                                                : m['GetMark'].toString(),
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: m['IsPresent'] == 'No'
+                                                  ? Colors.red
+                                                  : Colors.black,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                                  ),
+                                  const Divider(),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "Total: $obtainedMarks / $totalMarks",
+                                      ),
+                                      Text(
+                                        "Percentage: ${percentage.toStringAsFixed(2)}%",
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

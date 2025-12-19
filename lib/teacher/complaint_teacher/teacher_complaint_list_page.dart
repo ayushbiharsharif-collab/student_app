@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:student_app/auth_helper.dart';
 import 'package:student_app/teacher/complaint_teacher/teacher_add_complaint_page.dart';
 import 'package:student_app/teacher/complaint_teacher/teacher_complaint_details.dart';
 
@@ -15,8 +16,6 @@ class TeacherComplaintListPage extends StatefulWidget {
 }
 
 class _TeacherComplaintListPageState extends State<TeacherComplaintListPage> {
-  final String apiUrl = 'https://school.edusathi.in/api/teacher/complaint';
-
   List<dynamic> complaints = [];
   bool isLoading = true;
 
@@ -28,66 +27,65 @@ class _TeacherComplaintListPageState extends State<TeacherComplaintListPage> {
 
   // ---------------- FETCH COMPLAINTS ----------------
   Future<void> fetchComplaints() async {
+    debugPrint("🟡 fetchComplaints START");
+
+    if (mounted) setState(() => isLoading = true);
+
     try {
-      if (mounted) setState(() => isLoading = true);
-
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null || token.isEmpty) {
-        if (!mounted) return;
-        setState(() {
-          complaints = [];
-          isLoading = false;
-        });
-        return;
-      }
-
-      final response = await http.post(
-        Uri.parse(apiUrl),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
+      final response = await AuthHelper.post(
+        context,
+        'https://school.edusathi.in/api/teacher/complaint',
       );
 
-      if (!mounted) return;
+      // token expired → AuthHelper already logout kara dega
+      if (response == null || !mounted) return;
 
-      if (response.statusCode == 200 && response.body.isNotEmpty) {
+      debugPrint("🟢 STATUS CODE: ${response.statusCode}");
+      debugPrint("📦 RAW BODY: ${response.body}");
+
+      if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
+
         setState(() {
           complaints = decoded is List ? decoded : [];
           isLoading = false;
         });
+
+        debugPrint("📊 COMPLAINT COUNT: ${complaints.length}");
       } else {
         setState(() {
           complaints = [];
           isLoading = false;
         });
+        debugPrint("⚠️ Non-200 response");
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint("❌ fetchComplaints ERROR: $e");
       if (!mounted) return;
       setState(() {
         complaints = [];
         isLoading = false;
       });
     }
+
+    debugPrint("🔚 fetchComplaints END");
   }
 
   // ---------------- HELPERS ----------------
   Color getStatusColor(int status) =>
       status == 1 ? Colors.green : Colors.orange;
 
-  String getStatusText(int status) =>
-      status == 1 ? 'Solved' : 'Pending';
+  String getStatusText(int status) => status == 1 ? 'Solved' : 'Pending';
 
   // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Student Complaints',
-            style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Student Complaints',
+          style: TextStyle(color: Colors.white),
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: Colors.deepPurple,
         centerTitle: true,
@@ -97,95 +95,96 @@ class _TeacherComplaintListPageState extends State<TeacherComplaintListPage> {
               child: CircularProgressIndicator(color: Colors.deepPurple),
             )
           : complaints.isEmpty
-              ? const Center(child: Text('No complaints available'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: complaints.length,
-                  itemBuilder: (context, index) {
-                    final complaint = complaints[index];
-                    final int status = complaint['Status'] ?? 0;
+          ? const Center(child: Text('No complaints available'))
+          : RefreshIndicator(
+              onRefresh: fetchComplaints,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(12),
+                itemCount: complaints.length,
+                itemBuilder: (context, index) {
+                  final complaint = complaints[index];
+                  final int status = complaint['Status'] ?? 0;
 
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => TeacherComplaintDetailPage(
-                              complaintId: complaint['id'],
-                              date: complaint['Date'] ?? '',
-                              description: complaint['Description'] ?? '',
-                              status: status,
-                              studentName:
-                                  complaint['StudentName'] ?? '',
-                            ),
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => TeacherComplaintDetailPage(
+                            complaintId: complaint['id'],
+                            date: complaint['Date'] ?? '',
+                            description: complaint['Description'] ?? '',
+                            status: status,
+                            studentName: complaint['StudentName'] ?? '',
                           ),
-                        );
-                      },
-                      child: Card(
-                        elevation: 3,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                complaint['StudentName'] ?? 'N/A',
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
+                      );
+                    },
+                    child: Card(
+                      elevation: 3,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              complaint['StudentName'] ?? 'N/A',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.deepPurple,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.date_range,
                                   color: Colors.deepPurple,
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  const Icon(Icons.date_range,
-                                      color: Colors.deepPurple),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    formatDate(
-                                        complaint['Date'] ?? ''),
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold),
+                                const SizedBox(width: 8),
+                                Text(
+                                  formatDate(complaint['Date'] ?? ''),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  const Spacer(),
-                                  GestureDetector(
-                                    onTap: status != 0
-                                        ? null
-                                        : () =>
-                                            _openUpdateDialog(complaint),
-                                    child: _buildStatusChip(status),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                complaint['Description']
-                                        ?.replaceAll(
-                                            r"\r\n", "\n") ??
-                                    '',
-                                style:
-                                    const TextStyle(fontSize: 15),
-                              ),
-                            ],
-                          ),
+                                ),
+                                const Spacer(),
+                                GestureDetector(
+                                  onTap: status != 0
+                                      ? null
+                                      : () => _openUpdateDialog(complaint),
+                                  child: _buildStatusChip(status),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              complaint['Description']?.replaceAll(
+                                    r"\r\n",
+                                    "\n",
+                                  ) ??
+                                  '',
+                              style: const TextStyle(fontSize: 15),
+                            ),
+                          ],
                         ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
+              ),
+            ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.deepPurple,
         onPressed: () async {
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const TeacherAddComplaintPage(),
-            ),
+            MaterialPageRoute(builder: (_) => const TeacherAddComplaintPage()),
           );
           if (result == true && mounted) {
             fetchComplaints();
@@ -228,8 +227,7 @@ class _TeacherComplaintListPageState extends State<TeacherComplaintListPage> {
 
   // ---------------- UPDATE DIALOG ----------------
   void _openUpdateDialog(Map complaint) {
-    final TextEditingController descController =
-        TextEditingController();
+    final TextEditingController descController = TextEditingController();
     int selectedStatus = 1;
 
     showDialog(
@@ -251,8 +249,7 @@ class _TeacherComplaintListPageState extends State<TeacherComplaintListPage> {
             TextField(
               controller: descController,
               maxLines: 3,
-              decoration:
-                  const InputDecoration(labelText: "Description"),
+              decoration: const InputDecoration(labelText: "Description"),
             ),
           ],
         ),
@@ -265,13 +262,13 @@ class _TeacherComplaintListPageState extends State<TeacherComplaintListPage> {
             onPressed: () async {
               if (descController.text.trim().isEmpty) return;
 
-              final prefs =
-                  await SharedPreferences.getInstance();
-              final token = prefs.getString('token') ?? '';
+              final prefs = await SharedPreferences.getInstance();
+              final token = prefs.getString('auth_token') ?? '';
 
               await http.post(
                 Uri.parse(
-                    "https://school.edusathi.in/api/teacher/complaint/history/store"),
+                  "https://school.edusathi.in/api/teacher/complaint/history/store",
+                ),
                 headers: {
                   'Authorization': 'Bearer $token',
                   'Accept': 'application/json',
@@ -279,8 +276,7 @@ class _TeacherComplaintListPageState extends State<TeacherComplaintListPage> {
                 body: {
                   'ComplaintId': complaint['id'].toString(),
                   'Status': selectedStatus.toString(),
-                  'Description':
-                      descController.text.trim(),
+                  'Description': descController.text.trim(),
                 },
               );
 
@@ -299,8 +295,7 @@ class _TeacherComplaintListPageState extends State<TeacherComplaintListPage> {
 // ---------------- DATE FORMAT ----------------
 String formatDate(String dateStr) {
   try {
-    return DateFormat('dd-MM-yyyy')
-        .format(DateTime.parse(dateStr));
+    return DateFormat('dd-MM-yyyy').format(DateTime.parse(dateStr));
   } catch (_) {
     return dateStr;
   }
