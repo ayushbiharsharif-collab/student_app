@@ -201,7 +201,7 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
                   sibling['Photo'] != null &&
                       sibling['Photo'].toString().isNotEmpty
                   ? sibling['Photo'].toString()
-                  : 'https://school.edusathi.in/uploads/no_image.png';
+                  : ApiService.siblingUrl;
 
               final name = sibling['Name'] ?? 'Unknown';
               final className = sibling['Class'].toString();

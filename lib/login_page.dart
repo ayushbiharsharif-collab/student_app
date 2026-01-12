@@ -353,20 +353,20 @@ class _LoginPageState extends State<LoginPage> {
                   Wrap(
                     alignment: WrapAlignment.center,
                     children: [
+                      Text("Powered by ", style: TextStyle(fontSize: 14)),
                       Text(
-                        "Designed & Developed by ",
-                        style: TextStyle(fontSize: 12),
-                      ),
-                      Text(
-                        AppAssets.designer,
+                        "TechInnovation App Pvt. Ltd.®",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.purple,
+                          color: AppColors.primary,
                           fontSize: 12,
                         ),
                       ),
                       SizedBox(width: 5),
-                      Text("Visit our website", style: TextStyle(fontSize: 12)),
+                      Text(
+                        "Visit our website ",
+                        style: TextStyle(fontSize: 12),
+                      ),
                       GestureDetector(
                         onTap: _launchURL,
                         child: Text(

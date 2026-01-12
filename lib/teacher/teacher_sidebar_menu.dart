@@ -70,36 +70,35 @@ class _TeacherSidebarMenuState extends State<TeacherSidebarMenu> {
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
- Future<void> _logout(BuildContext context) async {
-  final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('auth_token') ?? '';
+  Future<void> _logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token') ?? '';
 
-  try {
-    if (token.isNotEmpty) {
-      await http.post(
-        Uri.parse('https://school.edusathi.in/api/logout'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      );
-    }
-  } catch (_) {}
+    try {
+      if (token.isNotEmpty) {
+        await http.post(
+          Uri.parse('https://school.edusathi.in/api/logout'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        );
+      }
+    } catch (_) {}
 
-  await prefs.clear();
-  await prefs.setBool('is_logged_in', false);
+    await prefs.clear();
+    await prefs.setBool('is_logged_in', false);
 
-  await _secureStorage.deleteAll();
+    await _secureStorage.deleteAll();
 
-  if (!mounted) return;
+    if (!mounted) return;
 
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(builder: (_) => LoginPage()),
-    (_) => false,
-  );
-}
-
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => LoginPage()),
+      (_) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

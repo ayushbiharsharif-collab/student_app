@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
+import 'package:student_app/api_service.dart';
 
 class ViewHomeworksPage extends StatelessWidget {
   final List<Map<String, dynamic>> homeworks;
@@ -18,7 +19,7 @@ class ViewHomeworksPage extends StatelessWidget {
           "Assigned Homeworks",
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: ListView.builder(
@@ -47,13 +48,13 @@ class ViewHomeworksPage extends StatelessWidget {
                   ? IconButton(
                       icon: const Icon(
                         Icons.download,
-                        color: Colors.deepPurple,
+                        color: AppColors.primary,
                       ),
                       onPressed: () {
                         String fileUrl = hw['Attachment'];
                         if (!fileUrl.startsWith('http')) {
                           fileUrl =
-                              'https://s3.ap-south-1.amazonaws.com/school.edusathi.in/homeworks/$fileUrl';
+                              ApiService.homeworkAttachment(fileUrl);
                         }
                         downloadFile(context, fileUrl);
                       },

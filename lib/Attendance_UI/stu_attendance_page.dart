@@ -126,7 +126,7 @@ class _AttendanceAnalyticsPageState extends State<AttendanceAnalyticsPage> {
           "Attendance Analysis",
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _isLoading
@@ -268,7 +268,7 @@ class AttendanceAnalyticsWidget extends StatelessWidget {
                         BarChartRodData(
                           toY:
                               (e.value['percentage'] ?? 0).toDouble(),
-                          color: Colors.deepPurple,
+                          color: AppColors.primary,
                           width: 14,
                           borderRadius: BorderRadius.circular(4),
                         ),

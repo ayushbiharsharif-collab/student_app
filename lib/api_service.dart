@@ -192,7 +192,7 @@ class ApiService {
   }
 
   // ================= ATTACHMENTS =================
-
+static const siblingUrl='https://school.edusathi.in/uploads/no_image.png';
   static const String s3Base =
       "https://s3.ap-south-1.amazonaws.com/school.edusathi.in";
 
@@ -221,7 +221,6 @@ class AppAssets {
   static const schoolDescription =
       "Empowering Education, Simplifying Management.";
 
-  static const designer = "TechInnovationApp";
   static const websiteName = "www.techinnovationapp.in";
   static const companyWebsite = "https://www.techinnovationapp.in";
 }
