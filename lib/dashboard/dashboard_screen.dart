@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:student_app/leave/leave_list.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -53,7 +54,9 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
   List<dynamic> notices = [];
   List<dynamic> events = [];
   List<dynamic> siblings = [];
-
+  int siblingDues = 0;
+  int fine = 0;
+  List<String> siblingNames = [];
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -62,7 +65,6 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
 
   @override
   void didPopNext() {
-    // jab kisi page se BACK aake dashboard dikhe
     _refreshDashboard();
   }
 
@@ -75,7 +77,7 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
-    _refreshDashboard(); // app open / login ke baad
+    _refreshDashboard();
   }
 
   Future<void> _refreshDashboard() async {
@@ -125,8 +127,22 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
       final data = jsonDecode(response.body);
       debugPrint("📢 RAW NOTICES: ${data['notices']}");
       dues = data['dues'] ?? 0;
+      siblingDues = data['sibling_dues'] ?? 0;
+      fine = data['fine'] ?? 0;
       payments = int.tryParse(data['payments'].toString()) ?? 0;
 
+      siblings = data['siblings'] ?? [];
+      // 🔥 MAIN FIX
+      final apiName = data['name'];
+      final apiPhoto = data['photo'];
+
+      if (apiName != null && apiName.toString().isNotEmpty) {
+        studentName = apiName;
+      }
+
+      if (apiPhoto != null && apiPhoto.toString().isNotEmpty) {
+        studentPhoto = apiPhoto;
+      }
       final rawDate = data['payment_date'] ?? '';
       if (rawDate.isNotEmpty) {
         try {
@@ -420,71 +436,86 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
           : Column(
               children: [
                 if (isRefreshing) const LinearProgressIndicator(minHeight: 3),
-
+                Text(
+                  "Welcome, $studentName 👋",
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        Column(
                           children: [
-                            GestureDetector(
-                              child: DashboardCard(
-                                title: 'Fee Amount',
-                                value: dues.toString(),
-                                borderColor: AppColors.danger,
-                                backgroundColor: AppColors.danger.shade50,
-                                textColor: AppColors.danger,
-                              ),
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => FeeDetailsPage(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                GestureDetector(
+                                  child: DashboardCard(
+                                    title: 'Fee Due',
+                                    value: "Sibling Due:₹${siblingDues}",
+                                    subtitle: "My Fees: ₹$dues",
+
+                                    borderColor: AppColors.danger,
+                                    backgroundColor: AppColors.danger.shade50,
+                                    textColor: AppColors.danger,
+                                  ),
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => FeeDetailsPage(),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                            GestureDetector(
-                              child: DashboardCard(
-                                title: 'Last Pay',
-                                value: payments.toString(),
-                                borderColor: AppColors.success,
-                                backgroundColor: AppColors.success.shade50,
-                                textColor: AppColors.success,
-                                date: lastPaymentDate,
-                              ),
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => PaymentPage(),
+                                GestureDetector(
+                                  child: DashboardCard(
+                                    title: 'Last Pay',
+                                    value: payments.toString(),
+                                    borderColor: AppColors.success,
+                                    backgroundColor: AppColors.success.shade50,
+                                    textColor: AppColors.success,
+                                    date: lastPaymentDate,
+                                  ),
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => PaymentPage(),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                            GestureDetector(
-                              child: DashboardCard(
-                                title: 'Subjects',
-                                value: subjects.toString(),
-                                borderColor: AppColors.info,
-                                backgroundColor: AppColors.info.shade50,
-                                textColor: AppColors.info,
-                              ),
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => SubjectsPage(),
+                                GestureDetector(
+                                  child: DashboardCard(
+                                    title: 'Subjects',
+                                    value: subjects.toString(),
+                                    borderColor: AppColors.info,
+                                    backgroundColor: AppColors.info.shade50,
+                                    textColor: AppColors.info,
+                                  ),
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => SubjectsPage(),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
                           ],
                         ),
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 15),
                         GestureDetector(
                           child: AttendanceCard(
                             title: "Today's Attendance",
                             place: "School",
                             status: status,
                             icon: Icons.school,
+                            // studentInfo:
+                            //     "$studentName • $studentClass • $studentsection",
                           ),
                           onTap: () => Navigator.push(
                             context,
@@ -545,6 +576,7 @@ class DashboardCard extends StatelessWidget {
   final Color backgroundColor;
   final Color textColor;
   final String? date;
+  final String? subtitle;
 
   const DashboardCard({
     super.key,
@@ -554,13 +586,14 @@ class DashboardCard extends StatelessWidget {
     required this.backgroundColor,
     required this.textColor,
     this.date,
+    this.subtitle,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 98,
-      height: 88,
+      height: 72,
       margin: const EdgeInsets.only(right: 10),
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
@@ -571,18 +604,44 @@ class DashboardCard extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: textColor,
-              fontSize: 13,
+          FittedBox(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: textColor,
+                fontSize: 13,
+              ),
             ),
           ),
-          const SizedBox(height: 5),
+
+          const SizedBox(height: 3),
+
+          if (subtitle != null)
+            FittedBox(
+              child: Text(
+                subtitle!,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: textColor.withOpacity(0.7),
+                ),
+              ),
+            ),
+
+          Flexible(
+            child: FittedBox(
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+            ),
+          ),
           if (date != null && date!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 0.0, bottom: 2.0),
+            FittedBox(
               child: Text(
                 date!,
                 style: TextStyle(
@@ -592,16 +651,8 @@ class DashboardCard extends StatelessWidget {
                 ),
               ),
             )
-          else
-            const SizedBox(height: 10),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
-          ),
+          else if (title != 'Fee Due')
+            const SizedBox(height: 6),
         ],
       ),
     );
@@ -1032,6 +1083,17 @@ class LeftSidebarMenu extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => SyllabusPage()),
+                );
+              },
+            ),
+            sidebarTile(
+              context: context,
+              icon: Icons.leave_bags_at_home,
+              title: 'Leave',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => LeaveListPage()),
                 );
               },
             ),

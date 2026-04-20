@@ -3,11 +3,13 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:student_app/api_service.dart';
+import 'package:student_app/leave/list_leaveApproval.dart';
 import 'package:student_app/login_page.dart';
 import 'package:student_app/alert/stu_alert.dart';
 import 'package:student_app/connect_teacher/teacher_chat_list.dart';
 import 'package:student_app/payment/payment_teacher_screen.dart';
 import 'package:student_app/school_info_page.dart';
+import 'package:student_app/syllabus/roll_no.dart';
 import 'package:student_app/syllabus/syllabus.dart';
 import 'package:student_app/teacher/AssignMarksPage.dart';
 import 'package:student_app/teacher/AssignSkillsPage.dart';
@@ -155,17 +157,24 @@ class _TeacherSidebarMenuState extends State<TeacherSidebarMenu> {
             'Dashboard',
             () => _navigate(context, const TeacherDashboardScreen()),
           ),
-          // sidebarItem(
-          //   context,
-          //   Icons.person,
-          //   'Admin',
-          //   () => _navigate(context, const AdminDashboardPage()),
-          // ),
+         
           sidebarItem(
             context,
             Icons.person,
             'Profile',
             () => _navigate(context, const TeacherProfilePage()),
+          ),
+           sidebarItem(
+            context,
+            Icons.format_list_numbered,
+             'Update Roll no',
+            () => _navigate(context, const UpdateRollNoPage()),
+          ),
+    sidebarItem(
+            context,
+            Icons.leave_bags_at_home_rounded,
+            'Approve Leave',
+            () => _navigate(context, const LeaveApprovalListPage()),
           ),
           sidebarItem(
             context,

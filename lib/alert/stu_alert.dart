@@ -40,11 +40,11 @@ class _StudentAlertPageState extends State<StudentAlertPage> {
     setState(() => isLoading = true);
 
     try {
-   final res = await ApiService.post(
-  context,
-  "/teacher/student/list",
-);
-
+      final res = await ApiService.post(
+        context,
+        "/teacher/student/list",
+        body: {"type": "all"},
+      );
 
       // 🔐 AuthHelper handles 401 + logout
       if (res == null) return;
@@ -143,11 +143,11 @@ class _StudentAlertPageState extends State<StudentAlertPage> {
       debugPrint("📤 ALERT BODY: $body");
 
       // 🔐 SAFE API CALL (same pattern as dashboard)
-    final res = await ApiService.post(
-  context,
-  "/teacher/student/alert",
-  body: body,
-);
+      final res = await ApiService.post(
+        context,
+        "/teacher/student/alert",
+        body: body,
+      );
 
       // ⚠️ AuthHelper already handles 401 + logout
       if (res == null) return;

@@ -82,7 +82,9 @@ class ApiService {
       return null;
     }
   }
-
+static Future<Map<String, String>> headers() async {
+  return await _headers();
+}
   // ================= GET =================
 
   static Future<http.Response?> get(
@@ -156,18 +158,34 @@ class ApiService {
   static Future<void> saveSession(Map<String, dynamic> data) async {
     final prefs = await SharedPreferences.getInstance();
 
-    // 🔐 Token
-    await _secureStorage.write(key: 'auth_token', value: data['token']);
-    await prefs.setString('auth_token', data['token']);
+    // 🔐 TOKEN
+    final String token = data['token'] ?? '';
+    await _secureStorage.write(key: 'auth_token', value: token);
+    await prefs.setString('auth_token', token);
     await prefs.setBool('is_logged_in', true);
 
-    final String userType = data['user_type'] ?? '';
-    final Map<String, dynamic> profile = data['profile'] ?? {};
-
+    // 👤 USER TYPE
+    final String userType = (data['user_type'] ?? '').toString();
     await prefs.setString('user_type', userType);
 
+    // 👤 PROFILE
+    final Map<String, dynamic> profile = Map<String, dynamic>.from(
+      data['profile'] ?? {},
+    );
+
+    // ================= ADMIN =================
+    if (userType.toLowerCase() == 'admin') {
+      await prefs.setString('admin_name', profile['name'] ?? '');
+      await prefs.setString('school_name', profile['school'] ?? '');
+      await prefs.setString('admin_photo', profile['photo'] ?? '');
+
+      debugPrint("🛡 ADMIN LOGIN SAVED");
+      debugPrint("Name: ${profile['name']}");
+      debugPrint("School: ${profile['school']}");
+      debugPrint("Photo: ${profile['photo']}");
+    }
     // ================= TEACHER =================
-    if (userType.toLowerCase() == 'teacher') {
+    else if (userType.toLowerCase() == 'teacher') {
       await prefs.setString('teacher_name', profile['name'] ?? '');
       await prefs.setString('teacher_class', profile['class'] ?? '');
       await prefs.setString('teacher_section', profile['section'] ?? '');
@@ -175,11 +193,6 @@ class ApiService {
       await prefs.setString('teacher_photo', profile['photo'] ?? '');
 
       debugPrint("👨‍🏫 TEACHER LOGIN SAVED");
-      debugPrint("Name: ${profile['name']}");
-      debugPrint("Class: ${profile['class']}");
-      debugPrint("Section: ${profile['section']}");
-      debugPrint("School: ${profile['school']}");
-      debugPrint("Photo: ${profile['photo']}");
     }
     // ================= STUDENT =================
     else if (userType.toLowerCase() == 'student') {
@@ -188,11 +201,13 @@ class ApiService {
       await prefs.setString('section', profile['section'] ?? '');
       await prefs.setString('school_name', profile['school_name'] ?? '');
       await prefs.setString('student_photo', profile['student_photo'] ?? '');
+
+      debugPrint("🎓 STUDENT LOGIN SAVED");
     }
   }
 
   // ================= ATTACHMENTS =================
-static const siblingUrl='https://school.edusathi.in/uploads/no_image.png';
+  static const siblingUrl = 'https://school.edusathi.in/uploads/no_image.png';
   static const String s3Base =
       "https://s3.ap-south-1.amazonaws.com/school.edusathi.in";
 
