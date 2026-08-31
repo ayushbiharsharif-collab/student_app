@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:student_app/api_service.dart';
 
 class AttendanceCard extends StatelessWidget {
   final String title;
   final String place;
   final String status;
   final IconData icon;
-  final String? studentInfo;
 
   const AttendanceCard({
     Key? key,
@@ -14,7 +12,6 @@ class AttendanceCard extends StatelessWidget {
     this.place = "School",
     this.status = "Present",
     this.icon = Icons.apartment,
-    this.studentInfo,
   }) : super(key: key);
 
   String getFormattedStatus() {
@@ -43,7 +40,7 @@ class AttendanceCard extends StatelessWidget {
         return Colors.black;
       default:
         return Colors.grey;
-      // fallback
+
     }
   }
 
@@ -64,41 +61,20 @@ class AttendanceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: RichText(
-                    text: TextSpan(
-                      children: [
-                        TextSpan(
-                          text: title,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        if (studentInfo != null && studentInfo!.isNotEmpty)
-                          TextSpan(
-                            text: " ($studentInfo)",
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(height: 8),
             Divider(color: Colors.grey.shade300, thickness: 1),
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(icon, color: AppColors.primary, size: 28),
+                Icon(icon, color: Colors.deepPurple, size: 28),
                 const SizedBox(width: 8),
                 Text(
                   place,

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
@@ -18,7 +18,7 @@ class HomeworkPage extends StatefulWidget {
 class _HomeworkPageState extends State<HomeworkPage> {
   List<dynamic> homeworks = [];
   bool isLoading = true;
-  bool _isDownloading = false; // 🔒 download lock
+  bool _isDownloading = false;
 
   @override
   void initState() {
@@ -77,57 +77,85 @@ class _HomeworkPageState extends State<HomeworkPage> {
   // =========================
   // 📥 SAFE FILE DOWNLOAD
   // =========================
-  Future<void> downloadFile(BuildContext context, String attachment) async {
+  Future<void> downloadFile(BuildContext context, String filePath) async {
     if (_isDownloading) return;
     _isDownloading = true;
 
     try {
-      // ✅ Safe URL resolve (no hardcode)
-      final fullUrl = attachment.startsWith('http')
-          ? attachment
-          : ApiService.homeworkAttachment(attachment);
+      // Backend se already full URL aa raha hai
+      final String fileUrl = filePath.trim();
 
-      final fileName = fullUrl.split('/').last;
-
-      debugPrint("⬇️ Download URL: $fullUrl");
-
-      final response = await http.get(Uri.parse(fullUrl));
-      if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
-        throw Exception("Download failed");
+      if (fileUrl.isEmpty) {
+        debugPrint("❌ Attachment URL is empty");
+        return;
       }
+
+      debugPrint("📎 Attachment URL => $fileUrl");
+
+      // Signed URL se proper filename nikalo
+      final Uri uri = Uri.parse(fileUrl);
+
+      String fileName = uri.pathSegments.isNotEmpty
+          ? uri.pathSegments.last
+          : "download_${DateTime.now().millisecondsSinceEpoch}";
+
+      final dio = Dio();
+      late String savePath;
 
       // ================= ANDROID =================
       if (Platform.isAndroid) {
         final downloadsDir = Directory('/storage/emulated/0/Download');
-        final file = File('${downloadsDir.path}/$fileName');
 
-        await file.writeAsBytes(response.bodyBytes, flush: true);
+        if (!await downloadsDir.exists()) {
+          await downloadsDir.create(recursive: true);
+        }
 
-        // ✅ PREVIEW OPEN
-        await OpenFile.open(file.path);
+        savePath = '${downloadsDir.path}/$fileName';
 
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("📥 Downloaded & preview opened")),
-        );
+        await dio.download(fileUrl, savePath);
+
+        await OpenFile.open(savePath);
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("📥 Downloaded & Preview opened")),
+          );
+        }
       }
-
       // ================= iOS =================
-      if (Platform.isIOS) {
+      else if (Platform.isIOS) {
         final dir = await getApplicationDocumentsDirectory();
-        final file = File('${dir.path}/$fileName');
 
-        await file.writeAsBytes(response.bodyBytes, flush: true);
+        savePath = '${dir.path}/$fileName';
 
-        // ✅ PREVIEW OPEN
-        await OpenFile.open(file.path);
+        await dio.download(fileUrl, savePath);
+
+        await OpenFile.open(savePath);
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("📥 Downloaded & Preview opened")),
+          );
+        }
+      }
+    } on DioException catch (e) {
+      debugPrint("❌ Dio Error: ${e.message}");
+      debugPrint("❌ Status Code: ${e.response?.statusCode}");
+      debugPrint("❌ Response: ${e.response?.data}");
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("❌ ${e.message}")));
       }
     } catch (e) {
-      debugPrint("❌ download error: $e");
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("❌ Download failed")));
+      debugPrint("❌ Error: $e");
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("❌ $e")));
+      }
     } finally {
       _isDownloading = false;
     }
@@ -141,7 +169,10 @@ class _HomeworkPageState extends State<HomeworkPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Homeworks', style: TextStyle(color: Colors.white)),
-        backgroundColor: AppColors.primary,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(gradient: AppColors.appBarGradient),
+        ),
+        centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: isLoading

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:student_app/api_service.dart';
-
+import 'package:flutter/services.dart';
 
 class AssignMarksPage extends StatefulWidget {
   const AssignMarksPage({super.key});
@@ -49,10 +49,7 @@ class _AssignMarksPageState extends State<AssignMarksPage> {
   // ---------------- EXAMS ----------------
   Future<void> fetchExams() async {
     try {
-      final response = await ApiService.post(
-        context,
-        "/get_exam",
-      );
+      final response = await ApiService.post(context, "/get_exam");
 
       if (response == null || !mounted) return;
 
@@ -73,10 +70,7 @@ class _AssignMarksPageState extends State<AssignMarksPage> {
   // ---------------- SUBJECTS ----------------
   Future<void> fetchSubjects() async {
     try {
-      final response = await ApiService.post(
-        context,
-        "/get_subject",
-      );
+      final response = await ApiService.post(context, "/get_subject");
 
       if (response == null || !mounted) return;
 
@@ -487,6 +481,7 @@ class _AssignMarksPageState extends State<AssignMarksPage> {
                                 controller: totalMarkController,
                                 decoration: const InputDecoration(
                                   labelText: "Total Marks",
+
                                   border: OutlineInputBorder(),
                                   contentPadding: EdgeInsets.symmetric(
                                     vertical: 12.0,
@@ -494,7 +489,9 @@ class _AssignMarksPageState extends State<AssignMarksPage> {
                                   ),
                                 ),
                                 keyboardType: TextInputType.number,
-
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
                                 onChanged: (val) {
                                   setState(() {
                                     for (var s in students) {
@@ -520,6 +517,9 @@ class _AssignMarksPageState extends State<AssignMarksPage> {
                                 keyboardType: TextInputType.numberWithOptions(
                                   decimal: true,
                                 ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
                                 controller: obtainControllers[student['id']],
                                 onChanged: (val) {
                                   student['GetMark'] = val;
@@ -558,7 +558,10 @@ class _AssignMarksPageState extends State<AssignMarksPage> {
                 ),
             ],
           ),
-          if (isLoading) const Center(child: CircularProgressIndicator()),
+          if (isLoading)
+            const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
         ],
       ),
     );

@@ -107,6 +107,7 @@ class _StudentListPageState extends State<StudentListPage> {
           'Student List',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+        centerTitle: true,
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [

@@ -17,6 +17,7 @@ import 'package:student_app/dashboard/calendar.dart';
 import 'package:student_app/homework/homework_model.dart';
 import 'package:student_app/homework/homework_page.dart';
 import 'package:student_app/dashboard/timetable_page.dart';
+import 'package:student_app/login_page.dart';
 import 'package:student_app/main.dart';
 import 'package:student_app/payment/fee_details_page.dart';
 import 'package:student_app/payment/payment_page.dart';
@@ -686,7 +687,6 @@ class InfoCard extends StatelessWidget {
       final fileName = url.split('/').last;
       late File file;
 
-      // 🔽 DIRECT HTTP (S3 public file)
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
@@ -751,13 +751,12 @@ class InfoCard extends StatelessWidget {
     final String schoolId = item["SchoolId"]?.toString() ?? '';
     final bool hasAttachment =
         attachment != null && attachment.isNotEmpty && schoolId.isNotEmpty;
-    final String folder = isEvent ? 'event' : 'notice';
+
     final String fullAttachmentUrl = hasAttachment
-        ? ApiService.attachmentUrl(schoolId, folder, attachment)
+        ? attachment.toString().trim()
         : '';
 
     debugPrint("📎 NOTICE ATTACHMENT URL: $fullAttachmentUrl");
-
     return Card(
       elevation: 3,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1190,20 +1189,79 @@ class LeftSidebarMenu extends StatelessWidget {
               onTap: () {
                 showDialog(
                   context: context,
-                  builder: (_) => AlertDialog(
+                  builder: (dialogContext) => AlertDialog(
                     title: const Text("Logout"),
                     content: const Text("Are you sure you want to logout?"),
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          Navigator.pop(dialogContext);
+                        },
                         child: const Text("Cancel"),
                       ),
                       TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          ApiService.post(context, "/logout");
+                        onPressed: () async {
+                        
+                          Navigator.pop(dialogContext);
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+
+                          try {
+                            // Logout API
+                            final response = await ApiService.post(
+                              context,
+                              "/logout",
+                            );
+
+                            debugPrint("Logout Response: ${response?.body}");
+
+                            // Remove ONLY login/session data
+                            final prefs = await SharedPreferences.getInstance();
+
+                            await prefs.remove('token');
+                            await prefs.remove('student_name');
+                            await prefs.remove('student_photo');
+                            await prefs.remove('school_name');
+                            await prefs.remove('class_name');
+                            await prefs.remove('section');
+
+                            // Close loader
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                            }
+
+                            if (!context.mounted) return;
+
+                            // Go to Login Page
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(builder: (_) => LoginPage()),
+                              (route) => false,
+                            );
+                          } catch (e) {
+                            debugPrint("Logout Error: $e");
+
+                            // Close loader
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                            }
+
+                            if (!context.mounted) return;
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Logout failed: $e")),
+                            );
+                          }
                         },
-                        child: const Text("Logout"),
+                        child: const Text(
+                          "Logout",
+                          style: TextStyle(color: AppColors.danger),
+                        ),
                       ),
                     ],
                   ),

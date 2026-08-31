@@ -51,11 +51,19 @@ class ViewHomeworksPage extends StatelessWidget {
                         color: AppColors.primary,
                       ),
                       onPressed: () {
-                        String fileUrl = hw['Attachment'];
-                        if (!fileUrl.startsWith('http')) {
-                          fileUrl =
-                              ApiService.homeworkAttachment(fileUrl);
+                        final String fileUrl = (hw['Attachment'] ?? '')
+                            .toString()
+                            .trim();
+
+                        if (fileUrl.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("No attachment found"),
+                            ),
+                          );
+                          return;
                         }
+
                         downloadFile(context, fileUrl);
                       },
                     )
@@ -82,27 +90,39 @@ class ViewHomeworksPage extends StatelessWidget {
   // ============================
   Future<void> downloadFile(BuildContext context, String fileUrl) async {
     try {
-      final response = await http.get(Uri.parse(fileUrl));
+      debugPrint("URL => $fileUrl");
+
+      final uri = Uri.parse(fileUrl);
+
+      final response = await http.get(uri);
+
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
-        throw Exception("Failed to download file");
+        throw Exception("Failed to download file (${response.statusCode})");
       }
 
-      // ✅ App-specific directory (NO permission needed)
       final dir = await getApplicationDocumentsDirectory();
-      final fileName = fileUrl.split('/').last;
+
+      final fileName = uri.pathSegments.last;
+
       final file = File('${dir.path}/$fileName');
 
       await file.writeAsBytes(response.bodyBytes, flush: true);
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Downloaded to ${file.path}")));
-
       await OpenFile.open(file.path);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Downloaded to ${file.path}")));
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Download error: $e")));
+      debugPrint("Download Error: $e");
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Download error: $e")));
+      }
     }
   }
 }

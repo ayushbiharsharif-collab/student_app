@@ -33,10 +33,7 @@ class _TeacherComplaintListPageState extends State<TeacherComplaintListPage> {
     if (mounted) setState(() => isLoading = true);
 
     try {
-      final response = await ApiService.post(
-        context,
-        'https://school.edusathi.in/api/teacher/complaint',
-      );
+      final response = await ApiService.post(context, '/teacher/complaint');
 
       // token expired → AuthHelper already logout kara dega
       if (response == null || !mounted) return;
@@ -266,10 +263,10 @@ class _TeacherComplaintListPageState extends State<TeacherComplaintListPage> {
               final prefs = await SharedPreferences.getInstance();
               final token = prefs.getString('auth_token') ?? '';
 
+              final baseUrl = await ApiService.getBaseUrl();
+
               await http.post(
-                Uri.parse(
-                  "https://school.edusathi.in/api/teacher/complaint/history/store",
-                ),
+                Uri.parse('$baseUrl/teacher/complaint/history/store'),
                 headers: {
                   'Authorization': 'Bearer $token',
                   'Accept': 'application/json',
@@ -280,7 +277,6 @@ class _TeacherComplaintListPageState extends State<TeacherComplaintListPage> {
                   'Description': descController.text.trim(),
                 },
               );
-
               if (!mounted) return;
               Navigator.pop(context);
               fetchComplaints();

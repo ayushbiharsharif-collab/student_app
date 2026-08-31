@@ -29,46 +29,94 @@ class TeacherHomeworkDetailPage extends StatelessWidget {
     String fileName,
   ) async {
     try {
-      final response = await http.get(Uri.parse(url));
+      // ✅ Parse URL safely
+      final uri = Uri.parse(url);
+
+      // ✅ SAFE FILE NAME
+      // Agar passed fileName me ?X-Amz... aa raha ho to remove ho jayega
+      String safeFileName = fileName.split('?').first;
+
+      // ✅ Agar filename empty ho to URL se filename le lo
+      if (safeFileName.trim().isEmpty) {
+        safeFileName = uri.pathSegments.isNotEmpty
+            ? uri.pathSegments.last
+            : 'download_${DateTime.now().millisecondsSinceEpoch}';
+      }
+
+      // ✅ Remove invalid filename characters
+      safeFileName = safeFileName.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+
+      debugPrint("⬇️ Download URL: $url");
+      debugPrint("📄 File Name: $safeFileName");
+
+      // ================= DOWNLOAD =================
+      final response = await http.get(uri);
+
+      debugPrint("📡 Status: ${response.statusCode}");
+      debugPrint("📦 Size: ${response.bodyBytes.length} bytes");
 
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
-        throw Exception("Failed to download file");
+        throw Exception("Failed to download file: ${response.statusCode}");
       }
 
       // ================= ANDROID =================
       if (Platform.isAndroid) {
-        // ✅ REAL Downloads folder (user visible)
         final Directory downloadsDir = Directory(
           '/storage/emulated/0/Download',
         );
 
-        final String filePath = '${downloadsDir.path}/$fileName';
+        // ✅ Make sure Downloads folder exists
+        if (!await downloadsDir.exists()) {
+          await downloadsDir.create(recursive: true);
+        }
+
+        final String filePath = '${downloadsDir.path}/$safeFileName';
+
         final File file = File(filePath);
 
         await file.writeAsBytes(response.bodyBytes, flush: true);
 
+        debugPrint("✅ Saved: $filePath");
+
+        // ✅ Open downloaded file
+        await OpenFile.open(filePath);
+
         if (!context.mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("📥 File saved to Downloads folder")),
         );
       }
-
       // ================= iOS =================
-      if (Platform.isIOS) {
+      else if (Platform.isIOS) {
         final Directory dir = await getApplicationDocumentsDirectory();
-        final String filePath = '${dir.path}/$fileName';
+
+        final String filePath = '${dir.path}/$safeFileName';
 
         final File file = File(filePath);
+
         await file.writeAsBytes(response.bodyBytes, flush: true);
 
+        debugPrint("✅ Saved: $filePath");
+
         if (!context.mounted) return;
-        await OpenFile.open(filePath); // Files app
+
+        // ✅ Preview/Open file
+        await OpenFile.open(filePath);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("📥 File downloaded successfully")),
+        );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint("❌ Download error: $e");
+      debugPrint("❌ StackTrace: $stackTrace");
+
       if (!context.mounted) return;
+
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("❌ Download failed")));
+      ).showSnackBar(SnackBar(content: Text("❌ Download failed: $e")));
     }
   }
 
@@ -135,12 +183,15 @@ class TeacherHomeworkDetailPage extends StatelessWidget {
                       backgroundColor: AppColors.primary,
                     ),
                     onPressed: () {
-                      String fileUrl = homework['Attachment'].toString();
+                      final String fileUrl = (homework['Attachment'] ?? '')
+                          .toString()
+                          .trim();
 
-                      if (!fileUrl.startsWith('http')) {
-                        fileUrl =
-                            'https://s3.ap-south-1.amazonaws.com/'
-                            'school.edusathi.in/homeworks/$fileUrl';
+                      if (fileUrl.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("No attachment found")),
+                        );
+                        return;
                       }
 
                       debugPrint("📎 TEACHER HW DETAIL DOWNLOAD URL: $fileUrl");

@@ -96,8 +96,10 @@ class _PaymentPageState extends State<PaymentPage> {
       }
 
       final String url = data['url'];
-      final String fileName = url.split('/').last;
 
+      final Uri uri = Uri.parse(url);
+
+      final String fileName = uri.pathSegments.last;
       final dio = Dio();
 
       // ================= ANDROID =================
@@ -109,6 +111,7 @@ class _PaymentPageState extends State<PaymentPage> {
         await dio.download(url, filePath);
 
         if (!mounted) return;
+        await OpenFile.open(filePath);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Receipt saved to Downloads folder")),
         );
@@ -122,7 +125,7 @@ class _PaymentPageState extends State<PaymentPage> {
         await dio.download(url, filePath);
 
         if (!mounted) return;
-        await OpenFile.open(filePath); // Files app
+        await OpenFile.open(filePath);
       }
     } catch (e) {
       if (!mounted) return;

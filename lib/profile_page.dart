@@ -108,15 +108,12 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  ImageProvider _profileImage() {
-    if (studentPhoto.isEmpty) {
-      return const AssetImage('assets/images/logo_new.png');
+  ImageProvider _safeImage(String url) {
+    if (url.trim().isEmpty) {
+      return const AssetImage("assets/images/logo.png");
     }
-    return NetworkImage(
-      studentPhoto.startsWith('http')
-          ? studentPhoto
-          : 'https://school.edusathi.in/$studentPhoto',
-    );
+
+    return NetworkImage(url.trim());
   }
 
   @override
@@ -131,7 +128,9 @@ class _ProfilePageState extends State<ProfilePage> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : Padding(
               padding: const EdgeInsets.all(16),
               child: Card(
@@ -147,7 +146,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         children: [
                           CircleAvatar(
                             radius: 45,
-                            backgroundImage: _profileImage(),
+                            backgroundImage: _safeImage(studentPhoto),
                           ),
                           const SizedBox(width: 20),
                           Expanded(

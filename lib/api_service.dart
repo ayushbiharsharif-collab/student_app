@@ -7,13 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'login_page.dart';
 
 class ApiService {
-  /// 🔥 CHANGE ONLY HERE
-  static const String baseUrl = "https://school.edusathi.in/api";
-
-  /// ⏱ Timeout (iOS safe)
+  static const String MasterApi = "https://edusathi.in/api";
   static const Duration timeout = Duration(seconds: 20);
 
-  /// 🔐 Secure storage (iOS + Android)
   static final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
@@ -32,22 +28,54 @@ class ApiService {
     return prefs.getString('auth_token') ?? '';
   }
 
+  static Future<String> getBaseUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final tenantId = prefs.getString("tenant_id") ?? "";
+
+    if (tenantId.isEmpty) {
+      return "https://edusathi.in/api";
+    }
+
+    final url = "https://$tenantId.edusathi.in/api";
+
+    debugPrint("🌍 BASE URL => $url");
+
+    return url;
+  }
   // ================= LOGOUT =================
 
   static Future<void> forceLogout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
+    final tenantId = prefs.getString('tenant_id');
+    final schoolName = prefs.getString('school_name');
+
     await prefs.clear();
     await _secureStorage.deleteAll();
 
+    if (tenantId != null) {
+      await prefs.setString('tenant_id', tenantId);
+    }
+
+    if (schoolName != null) {
+      await prefs.setString('school_name', schoolName);
+    }
+
     if (!context.mounted) return;
 
-    Navigator.pushAndRemoveUntil(
-      context,
+    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => LoginPage()),
-      (_) => false,
+      (route) => false,
     );
   }
 
+  static Future<String> getToken() async {
+    return await _getToken();
+  }
+
+  static Future<Map<String, String>> headers() async {
+    return await _headers();
+  }
   // ================= HEADERS =================
 
   static Future<Map<String, String>> _headers() async {
@@ -65,6 +93,11 @@ class ApiService {
     Map<String, dynamic>? body,
   }) async {
     try {
+      final baseUrl = await getBaseUrl();
+
+      debugPrint("📤 POST URL => $baseUrl$endpoint");
+      debugPrint("📤 BODY => ${jsonEncode(body ?? {})}");
+
       final response = await http
           .post(
             Uri.parse("$baseUrl$endpoint"),
@@ -76,15 +109,19 @@ class ApiService {
           )
           .timeout(timeout);
 
+      debugPrint("✅ STATUS => ${response.statusCode}");
+      debugPrint("✅ RESPONSE => ${response.body}");
+
       return response;
     } on TimeoutException {
       debugPrint("⏱ API TIMEOUT: $endpoint");
       return null;
+    } catch (e) {
+      debugPrint("🚨 POST ERROR: $e");
+      return null;
     }
   }
-static Future<Map<String, String>> headers() async {
-  return await _headers();
-}
+
   // ================= GET =================
 
   static Future<http.Response?> get(
@@ -99,9 +136,16 @@ static Future<Map<String, String>> headers() async {
     }
 
     try {
+      final baseUrl = await getBaseUrl();
+
+      debugPrint("📥 GET URL => $baseUrl$endpoint");
+
       final response = await http
           .get(Uri.parse("$baseUrl$endpoint"), headers: await _headers())
           .timeout(timeout);
+
+      debugPrint("✅ STATUS => ${response.statusCode}");
+      debugPrint("✅ RESPONSE => ${response.body}");
 
       if (response.statusCode == 401) {
         await forceLogout(context);
@@ -112,11 +156,10 @@ static Future<Map<String, String>> headers() async {
     } on TimeoutException {
       debugPrint("⏱ API TIMEOUT: $endpoint");
       return null;
+    } catch (e) {
+      debugPrint("🚨 GET ERROR: $e");
+      return null;
     }
-  }
-
-  static Future<String> getToken() async {
-    return await _getToken();
   }
 
   // ================= POST =================
@@ -134,6 +177,11 @@ static Future<Map<String, String>> headers() async {
     }
 
     try {
+      final baseUrl = await getBaseUrl();
+
+      debugPrint("📤 AUTH POST URL => $baseUrl$endpoint");
+      debugPrint("📤 BODY => ${jsonEncode(body ?? {})}");
+
       final response = await http
           .post(
             Uri.parse("$baseUrl$endpoint"),
@@ -141,6 +189,9 @@ static Future<Map<String, String>> headers() async {
             body: jsonEncode(body ?? {}),
           )
           .timeout(timeout);
+
+      debugPrint("✅ STATUS => ${response.statusCode}");
+      debugPrint("✅ RESPONSE => ${response.body}");
 
       if (response.statusCode == 401) {
         await forceLogout(context);
@@ -151,7 +202,21 @@ static Future<Map<String, String>> headers() async {
     } on TimeoutException {
       debugPrint("⏱ API TIMEOUT: $endpoint");
       return null;
+    } catch (e) {
+      debugPrint("🚨 POST ERROR: $e");
+      return null;
     }
+  }
+
+  static Future<String> getImageBaseUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    final tenantId = prefs.getString("tenant_id") ?? "";
+
+    if (tenantId.isEmpty) {
+      return "https://edusathi.in";
+    }
+
+    return "https://$tenantId.edusathi.in";
   }
 
   // ================= SAVE SESSIONS =================
@@ -208,16 +273,6 @@ static Future<Map<String, String>> headers() async {
 
   // ================= ATTACHMENTS =================
   static const siblingUrl = 'https://school.edusathi.in/uploads/no_image.png';
-  static const String s3Base =
-      "https://s3.ap-south-1.amazonaws.com/school.edusathi.in";
-
-  static String attachmentUrl(String schoolId, String folder, String file) {
-    return "$s3Base/documents/$schoolId/$folder/$file";
-  }
-
-  static String homeworkAttachment(String fileName) {
-    return "$s3Base/homeworks/$fileName";
-  }
 }
 
 class AppColors {
@@ -225,6 +280,12 @@ class AppColors {
   static const success = Colors.green;
   static const danger = Colors.red;
   static const info = Colors.blue;
+  static const designerColor = Colors.orange;
+  static const LinearGradient appBarGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xff5B5FEF), Color(0xff7C4DFF), Color(0xffA855F7)],
+  );
 }
 
 class AppAssets {

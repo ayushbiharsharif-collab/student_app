@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:student_app/api_service.dart';
 
-
 class SyllabusPage extends StatefulWidget {
   const SyllabusPage({super.key});
 
@@ -12,9 +11,6 @@ class SyllabusPage extends StatefulWidget {
 }
 
 class _SyllabusPageState extends State<SyllabusPage> {
- 
-  
-
   List<dynamic> exams = [];
   Map<String, dynamic>? selectedExam;
   List<dynamic> syllabusContent = [];
@@ -35,10 +31,7 @@ class _SyllabusPageState extends State<SyllabusPage> {
     setState(() => isLoadingExams = true);
 
     try {
-      final response = await ApiService.post(
-        context,
-        '/get_exam',
-      );
+      final response = await ApiService.post(context, '/get_exam');
 
       // 🔐 token expired → auto logout already handled
       if (response == null) return;

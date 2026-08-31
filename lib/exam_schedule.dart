@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:student_app/api_service.dart';
+import 'package:flutter/material.dart';
 
 class Exam {
   final String id;
@@ -48,20 +48,13 @@ class _ExamSchedulePageState extends State<ExamSchedulePage> {
     fetchExams();
   }
 
-  // ====================================================
-  // 🔹 FETCH EXAMS (SAFE)
-  // ====================================================
+
   Future<void> fetchExams() async {
     if (!mounted) return;
     setState(() => isLoadingExams = true);
 
     try {
-      final res = await ApiService.post(
-        context,
-        '/get_exam',
-        body: {}, // 🔥 IMPORTANT: empty JSON body
-      );
-
+      final res = await ApiService.post(context, '/get_exam', body: {});
       if (res == null) {
         if (!mounted) return;
         setState(() => isLoadingExams = false);
@@ -119,7 +112,7 @@ class _ExamSchedulePageState extends State<ExamSchedulePage> {
     try {
       final res = await ApiService.post(
         context,
-        "/schedule",
+        '/schedule',
         body: {'ExamId': examId},
       );
 
@@ -177,7 +170,7 @@ class _ExamSchedulePageState extends State<ExamSchedulePage> {
           style: TextStyle(color: Colors.white),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.deepPurple,
       ),
       body: Column(
         children: [
@@ -193,7 +186,7 @@ class _ExamSchedulePageState extends State<ExamSchedulePage> {
   Widget _buildExamSelector() {
     if (isLoadingExams) {
       return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+        child: CircularProgressIndicator(color: Colors.deepPurple),
       );
     }
 
@@ -221,9 +214,9 @@ class _ExamSchedulePageState extends State<ExamSchedulePage> {
               margin: const EdgeInsets.symmetric(horizontal: 6),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : Colors.transparent,
+                color: isSelected ? Colors.deepPurple : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary, width: 1.2),
+                border: Border.all(color: Colors.deepPurple, width: 1.2),
               ),
               child: Row(
                 children: [
@@ -253,7 +246,7 @@ class _ExamSchedulePageState extends State<ExamSchedulePage> {
     if (isLoadingSchedule) {
       return const Expanded(
         child: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+          child: CircularProgressIndicator(color: Colors.deepPurple),
         ),
       );
     }
@@ -321,7 +314,7 @@ class _ExamSchedulePageState extends State<ExamSchedulePage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: AppColors.primary),
+          Icon(icon, size: 18, color: Colors.deepPurple),
           const SizedBox(width: 10),
           SizedBox(
             width: 80,

@@ -123,8 +123,10 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
     setState(() => isLoading = true);
 
     try {
-      final uri = Uri.parse("${ApiService.baseUrl}/student/leave/apply");
+      // final uri = Uri.parse("${ApiService.baseUrl}/student/leave/apply");
+      final baseUrl = await ApiService.getBaseUrl();
 
+      final uri = Uri.parse("$baseUrl/student/leave/apply");
       final request = http.MultipartRequest("POST", uri);
 
       /// 🔹 Headers (token)
@@ -135,6 +137,9 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
       request.fields["Purpose"] = purposeController.text.trim();
       request.fields["StartDate"] = formatDate(startDate!);
       request.fields["EndDate"] = formatDate(endDate!);
+      print("URL: ${uri.toString()}");
+      print("Headers: ${request.headers}");
+      print("Fields: ${request.fields}");
 
       /// 🔥 Attachment (MAIN PART)
       if (selectedFile != null) {
@@ -148,13 +153,18 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
 
       final response = await request.send();
 
+      final responseBody = await response.stream.bytesToString();
+
+      print("Status Code: ${response.statusCode}");
+      print("Response: $responseBody");
+
       setState(() => isLoading = false);
 
       if (response.statusCode == 200) {
         showSnack("Leave applied successfully");
         Navigator.pop(context, true);
       } else {
-        showSnack("Failed to apply leave");
+        showSnack(responseBody);
       }
     } catch (e) {
       setState(() => isLoading = false);

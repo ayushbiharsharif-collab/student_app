@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:student_app/api_service.dart';
-
 
 class SchoolInfoPage extends StatefulWidget {
   @override
@@ -27,10 +27,7 @@ class _SchoolInfoPageState extends State<SchoolInfoPage> {
 
   Future<void> fetchSchoolInfo() async {
     try {
-      final response = await ApiService.post(
-        context,
-        '/school',
-      );
+      final response = await ApiService.post(context, '/school');
 
       if (response == null) {
         // auto-logout already handled
@@ -79,13 +76,16 @@ class _SchoolInfoPageState extends State<SchoolInfoPage> {
     try {
       setState(() => isDownloading = true);
 
-      final normalizedUrl = qrCode.startsWith('http')
-          ? qrCode
-          : 'https://school.edusathi.in/$qrCode';
+      final String normalizedUrl = qrCode.trim();
+
+      if (normalizedUrl.isEmpty) {
+        throw Exception("QR Code URL is empty");
+      }
 
       final response = await http.get(Uri.parse(normalizedUrl));
+
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
-        throw Exception("Download failed");
+        throw Exception("Download failed (${response.statusCode})");
       }
 
       final fileName = 'School_QR_${DateTime.now().millisecondsSinceEpoch}.png';
@@ -93,9 +93,15 @@ class _SchoolInfoPageState extends State<SchoolInfoPage> {
       // ================= ANDROID =================
       if (Platform.isAndroid) {
         final downloadsDir = Directory('/storage/emulated/0/Download');
-        final file = File('${downloadsDir.path}/$fileName');
 
+        if (!await downloadsDir.exists()) {
+          await downloadsDir.create(recursive: true);
+        }
+
+        final file = File('${downloadsDir.path}/$fileName');
         await file.writeAsBytes(response.bodyBytes, flush: true);
+
+        await OpenFile.open(file.path);
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -109,6 +115,8 @@ class _SchoolInfoPageState extends State<SchoolInfoPage> {
         final file = File('${dir.path}/$fileName');
 
         await file.writeAsBytes(response.bodyBytes, flush: true);
+
+        await OpenFile.open(file.path);
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -126,12 +134,11 @@ class _SchoolInfoPageState extends State<SchoolInfoPage> {
   }
 
   ImageProvider _safeImage(String url) {
-    if (url.isEmpty) {
+    if (url.trim().isEmpty) {
       return const AssetImage("assets/images/logo.png");
     }
-    return NetworkImage(
-      url.startsWith('http') ? url : 'https://school.edusathi.in/$url',
-    );
+
+    return NetworkImage(url.trim());
   }
 
   @override
@@ -147,7 +154,9 @@ class _SchoolInfoPageState extends State<SchoolInfoPage> {
       ),
       backgroundColor: AppColors.primary[50],
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : SingleChildScrollView(
               child: Card(
                 margin: const EdgeInsets.all(16),

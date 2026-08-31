@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:student_app/api_service.dart';
+import 'package:flutter/material.dart';
 
 class StudentResultPage extends StatefulWidget {
   const StudentResultPage({Key? key}) : super(key: key);
@@ -22,16 +22,13 @@ class _StudentResultPageState extends State<StudentResultPage> {
     fetchExams();
   }
 
-  // ====================================================
-  // 🔹 FETCH EXAMS (SAFE)
-  // ====================================================
   Future<void> fetchExams() async {
     if (!mounted) return;
 
     setState(() => isExamLoading = true);
 
     try {
-      final res = await ApiService.post(context, '/get_exam');
+      final res = await ApiService.post(context, '/get_exam', body: {});
 
       if (res == null) return;
 
@@ -67,11 +64,8 @@ class _StudentResultPageState extends State<StudentResultPage> {
   Future<void> fetchResults() async {
     if (selectedExamId == null) {
       _showSnack("Please select an exam");
-      print("❌ ExamId is null");
       return;
     }
-
-    print("📤 Sending ExamId: $selectedExamId");
 
     if (!mounted) return;
     setState(() => isLoading = true);
@@ -83,41 +77,23 @@ class _StudentResultPageState extends State<StudentResultPage> {
         body: {'ExamId': selectedExamId},
       );
 
-      print("📥 Raw Response: $res");
-
-      if (res == null) {
-        print("❌ Response is null");
-        return;
-      }
-
-      print("📊 Status Code: ${res.statusCode}");
-      print("📦 Body: ${res.body}");
+      if (res == null) return;
 
       if (res.statusCode == 200) {
-        final decoded = jsonDecode(res.body);
-
-        print("✅ Decoded Data: $decoded");
-
         if (!mounted) return;
 
         setState(() {
-          results = decoded;
+          results = jsonDecode(res.body);
         });
-
-        print("🎯 Results Length: ${results.length}");
       } else {
-        print("❌ API Error: ${res.statusCode}");
         _showSnack("Failed to fetch results");
       }
-    } catch (e, stack) {
-      print("🔥 Exception: $e");
-      print("🧵 StackTrace: $stack");
+    } catch (e) {
       _showSnack("Something went wrong");
     } finally {
       if (mounted) {
         setState(() => isLoading = false);
       }
-      print("🔚 Loading finished");
     }
   }
 
@@ -137,12 +113,15 @@ class _StudentResultPageState extends State<StudentResultPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  // ====================================================
+  // 🧱 UI (UNCHANGED)
+  // ====================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.deepPurple,
         title: const Text(
           "Student Result",
           style: TextStyle(color: Colors.white),
@@ -159,7 +138,7 @@ class _StudentResultPageState extends State<StudentResultPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.primary),
+                border: Border.all(color: Colors.deepPurple),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
@@ -183,7 +162,7 @@ class _StudentResultPageState extends State<StudentResultPage> {
             const SizedBox(height: 10),
 
             if (isLoading)
-              const CircularProgressIndicator(color: AppColors.primary),
+              const CircularProgressIndicator(color: Colors.deepPurple),
 
             if (!isLoading && results.isNotEmpty)
               Expanded(

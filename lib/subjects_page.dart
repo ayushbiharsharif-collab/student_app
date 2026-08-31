@@ -70,7 +70,9 @@ class _SubjectsPageState extends State<SubjectsPage> {
         leading: const BackButton(color: Colors.white),
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : subjects.isEmpty
           ? const Center(child: Text("No subjects found."))
           : ListView.builder(

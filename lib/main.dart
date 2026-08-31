@@ -1,10 +1,10 @@
+import 'package:student_app/school_code.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:student_app/Notification/notification_service.dart';
-
 import 'firebase_options.dart';
 import 'package:student_app/splash_screen.dart';
 import 'package:student_app/login_page.dart';
@@ -13,6 +13,7 @@ import 'package:student_app/teacher/teacher_dashboard_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
+
 /// 🔔 Background notification handler
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -85,10 +86,17 @@ class _RootDeciderState extends State<RootDecider> {
       if (isLoggedIn && token.isNotEmpty) {
         _screen = _decideDashboard(userType);
       } else {
-        // ❌ Not logged in → GO TO LOGIN
+        final tenantId = prefs.getString('tenant_id') ?? '';
+
         await _secureStorage.delete(key: 'auth_token');
-        await prefs.clear();
-        _screen = LoginPage();
+
+        if (tenantId.isNotEmpty) {
+          // School already selected
+          _screen = LoginPage();
+        } else {
+          // First time open
+          _screen = const SchoolCodePage();
+        }
       }
     } catch (e) {
       debugPrint("ROOT ERROR: $e");

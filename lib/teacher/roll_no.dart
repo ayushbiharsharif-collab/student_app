@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:student_app/api_service.dart';
+import 'package:flutter/services.dart';
 
 class UpdateRollNoPage extends StatefulWidget {
   const UpdateRollNoPage({super.key});
@@ -98,88 +99,86 @@ class _UpdateRollNoPageState extends State<UpdateRollNoPage> {
     }
   }
 
- Future<void> updateRollNumbers() async {
-  List<int> stdIds = [];
-  List<String> rollNos = [];
+  Future<void> updateRollNumbers() async {
+    List<int> stdIds = [];
+    List<String> rollNos = [];
 
-  debugPrint("🟡 UPDATE FUNCTION CALLED");
+    debugPrint("🟡 UPDATE FUNCTION CALLED");
 
-  for (int i = 0; i < _students.length; i++) {
-    final roll = controllers[i]?.text.trim() ?? '';
+    for (int i = 0; i < _students.length; i++) {
+      final roll = controllers[i]?.text.trim() ?? '';
 
-    debugPrint("👉 Student: ${_students[i]}");
-    debugPrint("👉 Roll Entered: $roll");
+      debugPrint("👉 Student: ${_students[i]}");
+      debugPrint("👉 Roll Entered: $roll");
 
-    if (roll.isEmpty) {
-      debugPrint("❌ EMPTY ROLL FOUND at index $i");
+      if (roll.isEmpty) {
+        debugPrint("❌ EMPTY ROLL FOUND at index $i");
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Roll No cannot be empty")),
-      );
-      return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Roll No cannot be empty")),
+        );
+        return;
+      }
+
+      final studentId = _students[i]['id']; // ⚠️ verify key
+
+      debugPrint("👉 Student ID: $studentId");
+
+      stdIds.add(studentId);
+      rollNos.add(roll);
     }
 
-    final studentId = _students[i]['id']; // ⚠️ verify key
+    /// ✅ FINAL BODY (ARRAY FORMAT)
+    final body = {"std_ids": stdIds, "roll_no": rollNos};
 
-    debugPrint("👉 Student ID: $studentId");
+    debugPrint("📤 FINAL BODY: $body");
 
-    stdIds.add(studentId);
-    rollNos.add(roll);
+    setState(() => _isLoading = true);
+
+    try {
+      debugPrint("🚀 CALLING API...");
+
+      final response = await ApiService.post(
+        context,
+        '/teacher/student/update_roll_no',
+        body: body,
+      );
+
+      if (response == null) {
+        debugPrint("🔴 RESPONSE NULL (TOKEN ISSUE)");
+        return;
+      }
+
+      debugPrint("🟢 STATUS CODE: ${response.statusCode}");
+      debugPrint("📦 RESPONSE BODY: ${response.body}");
+
+      if (response.statusCode == 200) {
+        debugPrint("✅ UPDATE SUCCESS");
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Roll Numbers Updated Successfully")),
+        );
+
+        fetchStudents();
+      } else {
+        debugPrint("❌ UPDATE FAILED");
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed (${response.statusCode})")),
+        );
+      }
+    } catch (e) {
+      debugPrint("🚨 EXCEPTION: $e");
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
+    } finally {
+      setState(() => _isLoading = false);
+      debugPrint("🔚 UPDATE FUNCTION END");
+    }
   }
 
-  /// ✅ FINAL BODY (ARRAY FORMAT)
-  final body = {
-    "std_ids": stdIds,
-    "roll_no": rollNos,
-  };
-
-  debugPrint("📤 FINAL BODY: $body");
-
-  setState(() => _isLoading = true);
-
-  try {
-    debugPrint("🚀 CALLING API...");
-
-    final response = await ApiService.post(
-      context,
-      '/teacher/student/update_roll_no',
-      body: body,
-    );
-
-    if (response == null) {
-      debugPrint("🔴 RESPONSE NULL (TOKEN ISSUE)");
-      return;
-    }
-
-    debugPrint("🟢 STATUS CODE: ${response.statusCode}");
-    debugPrint("📦 RESPONSE BODY: ${response.body}");
-
-    if (response.statusCode == 200) {
-      debugPrint("✅ UPDATE SUCCESS");
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Roll Numbers Updated Successfully")),
-      );
-
-      fetchStudents();
-    } else {
-      debugPrint("❌ UPDATE FAILED");
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed (${response.statusCode})")),
-      );
-    }
-  } catch (e) {
-    debugPrint("🚨 EXCEPTION: $e");
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Error: $e")),
-    );
-  } finally {
-    setState(() => _isLoading = false);
-    debugPrint("🔚 UPDATE FUNCTION END");
-  }
-}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -257,6 +256,10 @@ class _UpdateRollNoPageState extends State<UpdateRollNoPage> {
                                 child: TextField(
                                   controller: controllers[index],
                                   keyboardType: TextInputType.number,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
+
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(fontSize: 14),
                                   decoration: InputDecoration(

@@ -14,8 +14,6 @@ class ViewComplaintPage extends StatefulWidget {
 }
 
 class _ViewComplaintPageState extends State<ViewComplaintPage> {
- 
-
   List<dynamic> complaints = [];
   bool isLoading = true;
 
@@ -34,7 +32,7 @@ class _ViewComplaintPageState extends State<ViewComplaintPage> {
     setState(() => isLoading = true);
 
     try {
-      final res = await ApiService.post(context,'/student/complaint');
+      final res = await ApiService.post(context, '/student/complaint');
 
       // AuthHelper handles 401 + logout
       if (res == null) return;
@@ -60,9 +58,9 @@ class _ViewComplaintPageState extends State<ViewComplaintPage> {
       debugPrint("🚨 COMPLAINT LIST ERROR: $e");
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Something went wrong')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Something went wrong')));
     } finally {
       if (!mounted) return;
       setState(() => isLoading = false);
@@ -102,90 +100,93 @@ class _ViewComplaintPageState extends State<ViewComplaintPage> {
               child: CircularProgressIndicator(color: AppColors.primary),
             )
           : complaints.isEmpty
-              ? const Center(child: Text('No complaints available'))
-              : ListView.builder(
-                  itemCount: complaints.length,
-                  padding: const EdgeInsets.all(12),
-                  itemBuilder: (context, index) {
-                    final complaint = complaints[index];
-                    final status = complaint['Status'];
+          ? const Center(child: Text('No complaints available'))
+          : ListView.builder(
+              itemCount: complaints.length,
+              padding: const EdgeInsets.all(12),
+              itemBuilder: (context, index) {
+                final complaint = complaints[index];
+                final status = complaint['Status'];
 
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ComplaintDetailPage(
-                              complaintId: complaint['id'],
-                              date: complaint['Date'],
-                              description: complaint['Description'],
-                              status: status,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Card(
-                        elevation: 3,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.date_range,
-                                    color: AppColors.primary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    formatDate(complaint['Date'] ?? ''),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: getStatusColor(status)
-                                          .withOpacity(0.1),
-                                      border: Border.all(
-                                        color: getStatusColor(status),
-                                      ),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      getStatusText(status),
-                                      style: TextStyle(
-                                        color: getStatusColor(status),
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                complaint['Description']
-                                        ?.replaceAll(r"\r\n", "\n") ??
-                                    '',
-                                style: const TextStyle(fontSize: 15),
-                              ),
-                            ],
-                          ),
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ComplaintDetailPage(
+                          complaintId: complaint['id'],
+                          date: complaint['Date'],
+                          description: complaint['Description'],
+                          status: status,
                         ),
                       ),
                     );
                   },
-                ),
+                  child: Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.date_range,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                formatDate(complaint['Date'] ?? ''),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: getStatusColor(
+                                    status,
+                                  ).withOpacity(0.1),
+                                  border: Border.all(
+                                    color: getStatusColor(status),
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  getStatusText(status),
+                                  style: TextStyle(
+                                    color: getStatusColor(status),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            complaint['Description']?.replaceAll(
+                                  r"\r\n",
+                                  "\n",
+                                ) ??
+                                '',
+                            style: const TextStyle(fontSize: 15),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.white),

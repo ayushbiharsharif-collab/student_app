@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:student_app/school_code.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:student_app/api_service.dart';
@@ -27,10 +28,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _login() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
     if (idController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty) {
       setState(() {
@@ -39,6 +36,11 @@ class _LoginPageState extends State<LoginPage> {
       });
       return;
     }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
 
     final response = await ApiService.postPublic(
       "/login",
@@ -56,6 +58,7 @@ class _LoginPageState extends State<LoginPage> {
       });
       return;
     }
+
     final data = jsonDecode(response.body);
     debugPrint("🟢 LOGIN RESPONSE: $data");
     if (data['status'] == true) {
@@ -72,8 +75,7 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(builder: (_) => const TeacherDashboardScreen()),
           (_) => false,
         );
-      } 
-      else {
+      } else {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const DashboardScreen()),
@@ -200,9 +202,23 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // final isStudent = selectedRole == 'Student';
+    final isStudent = selectedRole == 'Student';
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xffEEF4FF),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const SchoolCodePage()),
+            );
+          },
+        ),
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(colors: [Colors.white, Colors.white]),
@@ -218,7 +234,7 @@ class _LoginPageState extends State<LoginPage> {
                   Text(
                     AppAssets.schoolName,
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
                     ),
@@ -246,12 +262,7 @@ class _LoginPageState extends State<LoginPage> {
                   TextField(
                     controller: idController,
                     decoration: InputDecoration(
-                      labelText: selectedRole == 'Student'
-                          ? "Student ID"
-                          : selectedRole == 'Teacher'
-                          ? "Teacher ID"
-                          : "Admin ID",
-
+                      labelText: isStudent ? "Student ID" : "Teacher ID",
                       prefixIcon: Icon(Icons.person),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -357,12 +368,12 @@ class _LoginPageState extends State<LoginPage> {
                   Wrap(
                     alignment: WrapAlignment.center,
                     children: [
-                      Text("Powered by ", style: TextStyle(fontSize: 14)),
+                      Text("Powered by ", style: TextStyle(fontSize: 12)),
                       Text(
                         "TechInnovation App Pvt. Ltd.®",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          color: AppColors.designerColor,
                           fontSize: 12,
                         ),
                       ),

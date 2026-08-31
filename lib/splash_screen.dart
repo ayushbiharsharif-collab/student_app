@@ -1,7 +1,7 @@
-import 'package:student_app/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:student_app/api_service.dart';
 import 'package:in_app_update/in_app_update.dart';
+import 'package:student_app/school_code.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -36,10 +36,9 @@ class _SplashScreenState extends State<SplashScreen> {
     Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;
 
-  
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => LoginPage()),
+        MaterialPageRoute(builder: (_) => SchoolCodePage()),
       );
     });
   }

@@ -7,7 +7,6 @@ import 'package:student_app/api_service.dart';
 import 'package:student_app/teacher/teacher_homework_detail_page.dart';
 import 'package:student_app/teacher/teacher_homework_page.dart';
 
-
 class TeacherRecentHomeworks extends StatelessWidget {
   final List<Map<String, dynamic>> homeworks;
 
@@ -79,10 +78,11 @@ class TeacherRecentHomeworks extends StatelessWidget {
                                 color: AppColors.primary,
                               ),
                               onPressed: () {
-                                final attachment = hw['Attachment'];
+                                final String fileUrl = (hw['Attachment'] ?? '')
+                                    .toString()
+                                    .trim();
 
-                                if (attachment == null ||
-                                    attachment.toString().isEmpty) {
+                                if (fileUrl.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text("Attachment not available"),
@@ -90,13 +90,6 @@ class TeacherRecentHomeworks extends StatelessWidget {
                                   );
                                   return;
                                 }
-
-                                // ✅ Teacher homework FINAL S3 URL
-                                final String fileUrl =
-                                    attachment.toString().startsWith('http')
-                                    ? attachment.toString()
-                                    : 'https://s3.ap-south-1.amazonaws.com/'
-                                          'school.edusathi.in/homeworks/$attachment';
 
                                 debugPrint(
                                   "📎 TEACHER HW DOWNLOAD URL: $fileUrl",
@@ -152,6 +145,7 @@ class TeacherRecentHomeworks extends StatelessWidget {
         await file.writeAsBytes(response.bodyBytes, flush: true);
 
         if (!context.mounted) return;
+         await OpenFile.open(filePath); // Files app
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("File saved to Downloads folder")),
         );
