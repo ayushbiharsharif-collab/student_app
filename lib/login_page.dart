@@ -204,8 +204,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final isStudent = selectedRole == 'Student';
 
-    return Scaffold(
-      appBar: AppBar(
+    return Scaffold(      appBar: AppBar(
         backgroundColor: const Color(0xffEEF4FF),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -368,7 +367,10 @@ class _LoginPageState extends State<LoginPage> {
                   Wrap(
                     alignment: WrapAlignment.center,
                     children: [
-                      Text("Powered by ", style: TextStyle(fontSize: 12)),
+                      Text(
+                        "Powered by ",
+                        style: TextStyle(fontSize: 12),
+                      ),
                       Text(
                         "TechInnovation App Pvt. Ltd.®",
                         style: TextStyle(
