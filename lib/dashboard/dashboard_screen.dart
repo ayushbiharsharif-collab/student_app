@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:student_app/leave/leave_list.dart';
+import 'package:student_app/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -17,7 +18,6 @@ import 'package:student_app/dashboard/calendar.dart';
 import 'package:student_app/homework/homework_model.dart';
 import 'package:student_app/homework/homework_page.dart';
 import 'package:student_app/dashboard/timetable_page.dart';
-import 'package:student_app/login_page.dart';
 import 'package:student_app/main.dart';
 import 'package:student_app/payment/fee_details_page.dart';
 import 'package:student_app/payment/payment_page.dart';
@@ -687,6 +687,7 @@ class InfoCard extends StatelessWidget {
       final fileName = url.split('/').last;
       late File file;
 
+      // 🔽 DIRECT HTTP (S3 public file)
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
@@ -1201,8 +1202,10 @@ class LeftSidebarMenu extends StatelessWidget {
                       ),
                       TextButton(
                         onPressed: () async {
-                        
+                          // Close confirmation dialog
                           Navigator.pop(dialogContext);
+
+                          // Show loader
                           showDialog(
                             context: context,
                             barrierDismissible: false,
