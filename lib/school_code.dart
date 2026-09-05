@@ -45,9 +45,7 @@ class _SchoolCodePageState extends State<SchoolCodePage> {
         final prefs = await SharedPreferences.getInstance();
 
         await prefs.setString("tenant_id", tenantId);
-        await prefs.setString("school_name", schoolName);
-
-
+        await prefs.setString("school_name", schoolName);       
 
         Navigator.pushReplacement(
           context,
