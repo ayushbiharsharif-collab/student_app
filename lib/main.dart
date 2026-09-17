@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:student_app/Notification/notification_service.dart';
 import 'firebase_options.dart';
+import 'dart:io';
 import 'package:student_app/splash_screen.dart';
 import 'package:student_app/login_page.dart';
 import 'package:student_app/dashboard/dashboard_screen.dart';
@@ -22,10 +23,16 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (Platform.isAndroid) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
 
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  await NotificationService.initialize();
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    await NotificationService.initialize();
+  }
+
   runApp(const MyApp());
 }
 
@@ -59,10 +66,12 @@ class _RootDeciderState extends State<RootDecider> {
   @override
   void initState() {
     super.initState();
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint("🔔 Foreground message received");
-      NotificationService.display(message);
-    });
+    if (Platform.isAndroid) {
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        debugPrint("🔔 Foreground message received");
+        NotificationService.display(message);
+      });
+    }
 
     _initApp();
   }
