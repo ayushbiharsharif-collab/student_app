@@ -28,21 +28,20 @@ class ApiService {
     return prefs.getString('auth_token') ?? '';
   }
 
-  static Future<String> getBaseUrl() async {
+   static Future<String> getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
 
     final tenantId = prefs.getString("tenant_id") ?? "";
 
     if (tenantId.isEmpty) {
-      return "https://edusathi.in/api";
+      return MasterApi;
     }
 
     final url = "https://$tenantId.edusathi.in/api";
 
-    debugPrint("🌍 BASE URL => $url");
-
     return url;
   }
+
   // ================= LOGOUT =================
 
   static Future<void> forceLogout(BuildContext context) async {
@@ -208,16 +207,6 @@ class ApiService {
     }
   }
 
-  static Future<String> getImageBaseUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    final tenantId = prefs.getString("tenant_id") ?? "";
-
-    if (tenantId.isEmpty) {
-      return "https://edusathi.in";
-    }
-
-    return "https://$tenantId.edusathi.in";
-  }
 
   // ================= SAVE SESSIONS =================
   static Future<void> saveSession(Map<String, dynamic> data) async {
